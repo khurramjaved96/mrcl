@@ -1,5 +1,4 @@
 # mrcl
-Under blind review at NeurIPS19 
  
 ![alt text](plots/overview.png "Method Overview")
 
