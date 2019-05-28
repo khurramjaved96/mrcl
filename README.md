@@ -1,5 +1,4 @@
-# mrcl
-Under blind review at NeurIPS19 
+# mrcl : Meta-Learning Representations for Continual Learning 
 
 ## Learning Representations
 To learn representations for omnigtot run the following command:
