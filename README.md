@@ -18,7 +18,7 @@ python mrcl_regression.py --update-step 40 --meta_lr 0.0001 --update_lr 0.003 --
 This will store the learned model at ../results/DDMonthYYYY/Sin/0.0001/mrcl_regression)
 
 ### Evaluating MRCL Representations 
-We provide trained models in ./trained_models which can be used to evaluate performance on the continual learning benchmarks. 
+We provide trained models at https://drive.google.com/drive/folders/1vHHT5kxtgx8D4JHYg25iA-C31O5OjAQz?usp=sharing which can be used to evaluate performance on the continual learning benchmarks. 
 
 To evaluate performance on omniglot test trajectories of omniglot run: 
 ``` bash
