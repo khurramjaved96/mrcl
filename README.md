@@ -55,3 +55,7 @@ The accuracy curve averaged over 50 runs as we learn more classes sequentially. 
 Mean squared error across all 10 regression tasks. The x-axis in (a) corresponds to seeing all data points of samples for class 1, then class 2 and so on. These learning curves are averaged over 50 runs, with error bars representing 95% confidence interval drawn by 1,000 bootstraps.
 ![alt text](plots/regression.png "Method Overview")
 We can see that the representation trained on iid data---pretraining---is not effective for online updating. Notice that in the final prediction accuracy in (b), pretraining and SR-NN representations have accurate predictions for task 10, but high error for earlier tasks. MRCL, on the other hand, has a slight skew in error towards later tasks in learning but is largely robust.
+
+### References
+1. Meta-learning code has been taken and modified from : https://github.com/dragen1860/MAML-Pytorch
+2. For EWC, MER, and ER-Reservoir experiments, we modify the following implementation to be able to load our models : https://github.com/mattriemer/MER
