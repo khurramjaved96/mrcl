@@ -1,4 +1,6 @@
 # mrcl
+
+Paper : https://arxiv.org/abs/1905.12588
  
 ![alt text](plots/overview.png "Method Overview")
 
