@@ -1,8 +1,10 @@
 # mrcl
 
 Paper : https://arxiv.org/abs/1905.12588
- 
-![alt text](plots/overview.png "Method Overview")
+
+<div>
+<img src="plots/overview.png" alt="Overall system architecture for learning representations" width="50% align="middle">
+                                                                                                  </div>                                                                                        
 
 
 ### Learning MRCL Representations
