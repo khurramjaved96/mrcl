@@ -3,7 +3,7 @@
 Paper : https://arxiv.org/abs/1905.12588
 
 <div>
-<img src="plots/overview.png" alt="Overall system architecture for learning representations" width="50% align="middle">
+<img src="plots/overview.png" alt="Overall system architecture for learning representations" width="70% align="middle">
                                                                                                   </div>                                                                                        
 
 
