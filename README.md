@@ -1,12 +1,16 @@
 # mrcl
- 
-![alt text](plots/overview.png "Method Overview")
+
+Paper : https://arxiv.org/abs/1905.12588
+
+<div>
+<img src="plots/overview.png" alt="Overall system architecture for learning representations" width="100% align="middle">
+                                                                                                  </div>                                                                                        
 
 
 ### Learning MRCL Representations
 To learn representations for omnigtot run the following command:
 ``` bash
-python mrcl_classification.py --rln 6 --update_lr 0.03 --name mrcl_omniglot --update_step 20 --steps 40000
+python mrcl_classification.py --rln 6 --update_lr 0.03 --name mrcl_omniglot --update_step 20 --steps 15000
 ```
 
 This will store the learned model at ../results/DDMonthYYYY/Omniglot/0.0001/mrcl_omniglot)
@@ -18,7 +22,7 @@ python mrcl_regression.py --update-step 40 --meta_lr 0.0001 --update_lr 0.003 --
 This will store the learned model at ../results/DDMonthYYYY/Sin/0.0001/mrcl_regression)
 
 ### Evaluating MRCL Representations 
-We provide trained models in ./trained_models which can be used to evaluate performance on the continual learning benchmarks. 
+We provide trained models at https://drive.google.com/drive/folders/1vHHT5kxtgx8D4JHYg25iA-C31O5OjAQz?usp=sharing which can be used to evaluate performance on the continual learning benchmarks. 
 
 To evaluate performance on omniglot test trajectories of omniglot run: 
 ``` bash
@@ -55,3 +59,7 @@ The accuracy curve averaged over 50 runs as we learn more classes sequentially. 
 Mean squared error across all 10 regression tasks. The x-axis in (a) corresponds to seeing all data points of samples for class 1, then class 2 and so on. These learning curves are averaged over 50 runs, with error bars representing 95% confidence interval drawn by 1,000 bootstraps.
 ![alt text](plots/regression.png "Method Overview")
 We can see that the representation trained on iid data---pretraining---is not effective for online updating. Notice that in the final prediction accuracy in (b), pretraining and SR-NN representations have accurate predictions for task 10, but high error for earlier tasks. MRCL, on the other hand, has a slight skew in error towards later tasks in learning but is largely robust.
+
+### References
+1. Meta-learning code has been taken and modified from : https://github.com/dragen1860/MAML-Pytorch
+2. For EWC, MER, and ER-Reservoir experiments, we modify the following implementation to be able to load our models : https://github.com/mattriemer/MER
