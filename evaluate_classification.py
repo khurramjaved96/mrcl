@@ -40,7 +40,7 @@ def main(args):
     total_clases = [10, 50, 75, 100, 150, 200]
     for tot_class in total_clases:
         lr_list = [0.03, 0.01, 0.003, 0.001, 0.0003, 0.0001, 0.00003, 0.00001]
-        for aoo in range(0, 20):
+        for aoo in range(0, args.runs):
 
             keep = np.random.choice(list(range(200)), tot_class)
 
@@ -160,25 +160,11 @@ def main(args):
                     for x in list_of_names:
                         logger.info("Unfrozen layer = %s", str(x[0]))
                     opt = torch.optim.Adam(list_of_params, lr=lr)
-                    import module.replay as rep
-                    res_sampler = rep.ReservoirSampler(mem_size)
+
                     for _ in range(0, args.epoch):
                         for img, y in iterator_sorted:
-
-                            if mem_size > 0:
-                                res_sampler.update_buffer(zip(img, y))
-                                res_sampler.update_observations(len(img))
-                                img = img.to(device)
-                                y = y.to(device)
-                                img2, y2 = res_sampler.sample_buffer(16)
-                                img2 = img2.to(device)
-                                y2 = y2.to(device)
-
-                                img = torch.cat([img, img2], dim=0)
-                                y = torch.cat([y, y2], dim=0)
-                            else:
-                                img = img.to(device)
-                                y = y.to(device)
+                            img = img.to(device)
+                            y = y.to(device)
 
                             pred = maml(img)
                             opt.zero_grad()
@@ -206,7 +192,6 @@ def main(args):
                 results_mem_size[mem_size] = (max_acc, max_lr)
                 logger.info("Final Max Result = %s", str(max_acc))
                 writer.add_scalar('/finetune/best_' + str(aoo), max_acc, tot_class)
-                # quit()
             final_results_all.append((tot_class, results_mem_size))
             print("A=  ", results_mem_size)
             logger.info("Final results = %s", str(results_mem_size))
@@ -232,6 +217,7 @@ if __name__ == '__main__':
     argparser.add_argument('--test', action="store_true")
     argparser.add_argument("--iid", action="store_true")
     argparser.add_argument("--rln", type=int, default=6)
+    argparser.add_argument("--runs", type=int, default=50)
 
     args = argparser.parse_args()
 

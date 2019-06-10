@@ -47,11 +47,11 @@ class MetaLearingClassification(nn.Module):
         counter = 0
 
         class_cur = 0
-        class_to_rest = 0
+        class_to_reset = 0
         for it1 in iterators:
             for img, data in it1:
                 # y_mapping[class_cur] = float(y_mapping[class_cur])
-                class_to_rest = data[0].item()
+                class_to_reset = data[0].item()
                 # data[data>-1] = y_mapping[class_cur]
                 counter += 1
                 x_traj.append(img)
@@ -59,7 +59,7 @@ class MetaLearingClassification(nn.Module):
                 if counter % int(steps / len(iterators)) == 0:
                     class_cur += 1
                     break
-        self.reset_classifer(class_to_rest)
+        self.reset_classifer(class_to_reset)
 
         if len(x_traj) < steps:
             it1 = iterators[-1]
@@ -68,6 +68,7 @@ class MetaLearingClassification(nn.Module):
 
                 x_traj.append(img)
                 y_traj.append(data)
+                print("Len of iterators = ", len(iterators))
                 if counter % int(steps % len(iterators)) == 0:
                     break
 

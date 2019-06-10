@@ -35,9 +35,6 @@ class SineSampler:
     def get_complete_iterator(self):
         return self.task_sampler.complete_iterator
 
-    def get_another_complete_iterator(self):
-        return self.task_sampler.another_complete_iterator
-
     def sample_random(self):
         return self.task_sampler.get([np.random.choice(self.tasks)])
 
@@ -63,9 +60,6 @@ class SineBaselineSampler:
 
     def get_complete_iterator(self):
         return self.task_sampler.complete_iterator
-
-    def get_another_complete_iterator(self):
-        return self.task_sampler.another_complete_iterator
 
     def sample_random(self):
         return self.task_sampler.get([np.random.choice(self.tasks)])

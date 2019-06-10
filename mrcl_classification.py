@@ -26,8 +26,8 @@ def main(args):
 
     args.classes = list(range(963))
 
-    dataset = df.DatasetFactory.get_dataset(args.dataset, background=True, train=True)
-    dataset_test = df.DatasetFactory.get_dataset(args.dataset, background=True, train=False)
+    dataset = df.DatasetFactory.get_dataset(args.dataset, background=True, train=True, all=True)
+    dataset_test = df.DatasetFactory.get_dataset(args.dataset, background=True, train=False, all=True)
 
     iterator_test = torch.utils.data.DataLoader(dataset_test, batch_size=5,
                                                 shuffle=True, num_workers=1)
@@ -58,9 +58,9 @@ def main(args):
         frozen_layers.append("net.vars." + str(temp))
 
     for name, param in maml.named_parameters():
-        logger.info(name)
+        # logger.info(name)
         if name in frozen_layers:
-            logger.info("Freeezing name %s", str(name))
+            logger.info("RLN layer %s", str(name))
             param.learn = False
 
     # Update the classifier
@@ -68,9 +68,9 @@ def main(args):
     list_of_names = list(filter(lambda x: x[1].learn, maml.named_parameters()))
 
     for a in list_of_names:
-        logger.info("Unfrozen layers for rep learning = %s", a[0])
+        logger.info("TLN layer = %s", a[0])
 
-    for step in range(args.epoch):
+    for step in range(args.steps):
 
         t1 = np.random.choice(args.classes, np.random.randint(1, args.tasks + 1), replace=False)
 
@@ -117,7 +117,7 @@ def main(args):
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--epoch', type=int, help='epoch number', default=40000)
+    argparser.add_argument('--steps', type=int, help='epoch number', default=40000)
     argparser.add_argument('--seed', type=int, help='Seed for random', default=10000)
     argparser.add_argument('--seeds', type=int, nargs='+', help='n way', default=[10])
     argparser.add_argument('--tasks', type=int, help='meta batch size, namely task num', default=1)

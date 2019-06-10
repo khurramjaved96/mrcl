@@ -19,6 +19,13 @@ logger = logging.getLogger('experiment')
 
 
 def construct_set(iterators, sampler, steps=2, iid=False):
+    '''
+    :param iterators: List of iterators to sample different tasks
+    :param sampler: object that samples data from the iterator and appends task ids
+    :param steps: no of batches per task
+    :param iid:
+    :return:
+    '''
     x_spt = []
     y_spt = []
     for id, it1 in enumerate(iterators):
@@ -55,6 +62,7 @@ def construct_set(iterators, sampler, steps=2, iid=False):
 
 
 def main(args):
+    # Seed random number generators
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
     np.random.seed(args.seed)
@@ -62,7 +70,8 @@ def main(args):
     writer = SummaryWriter(my_experiment.path + "tensorboard")
     print(args)
 
-    tasks = list(range(5999))
+    # Initalize tasks; we sample 1000 tasks for evaluation
+    tasks = list(range(1000))
     logger = logging.getLogger('experiment')
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, None, capacity=args.capacity + 1)
@@ -74,8 +83,8 @@ def main(args):
     else:
         device = torch.device('cpu')
 
+    # Load the model
     maml = MetaLearnerRegression(args, config).to(device)
-
     maml.net = torch.load(args.model, map_location='cpu').to(device)
 
     for name, param in maml.named_parameters():
@@ -87,9 +96,9 @@ def main(args):
     num = sum(map(lambda x: np.prod(x.shape), tmp))
     logger.info(maml)
     logger.info('Total trainable tensors: %d', num)
-    #
-    accuracy = 0
 
+    ##### Setting up parameters for freezing RLN layers
+    #### Also resets TLN layers with random initialization if args.reset is true
     frozen_layers = []
     for temp in range(args.rln * 2):
         frozen_layers.append("net.vars." + str(temp))
@@ -103,7 +112,6 @@ def main(args):
         else:
             if args.reset:
                 w = nn.Parameter(torch.ones_like(param))
-                # logger.info("W shape = %s", str(len(w.shape)))
                 if len(w.shape) > 1:
                     logger.info("Resseting layer %s", str(name))
                     torch.nn.init.kaiming_normal_(w)
@@ -111,8 +119,6 @@ def main(args):
                     w = nn.Parameter(torch.zeros_like(param))
                 param.data = w
                 param.learn = True
-
-    #
 
     for name, param in maml.net.named_parameters():
         logger.info(name)

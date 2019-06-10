@@ -6,28 +6,60 @@ class ModelFactory():
     def get_model(model_type, dataset, in_channels=6, num_actions=6, width=300):
 
         if "Sin" == dataset:
-            hidden_size = width
-            return [
-                ('linear', [hidden_size, in_channels]),
-                ('relu', [True]),
-                ('linear', [hidden_size, hidden_size]),
-                ('relu', [True]),
-                ('linear', [hidden_size, hidden_size]),
-                ('relu', [True]),
-                ('linear', [hidden_size, hidden_size]),
-                ('relu', [True]),
-                ('linear', [hidden_size, hidden_size]),
-                ('relu', [True]),
-                ('linear', [hidden_size * 3, hidden_size]),
-                ('relu', [True]),
-                ('rep', []),
-                ('linear', [hidden_size, hidden_size * 3]),
-                ('relu', [True]),
-                ('linear', [hidden_size, hidden_size]),
-                ('relu', [True]),
-                ('linear', [num_actions, hidden_size])
-            ]
+            if model_type=="old":
+                hidden_size = width
+                return [
+                    ('linear', [hidden_size, in_channels]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size, hidden_size]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size, hidden_size]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size, hidden_size]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size, hidden_size]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size * 3, hidden_size]),
+                    ('relu', [True]),
+                    ('rep', []),
+                    ('linear', [hidden_size, hidden_size * 3]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size, hidden_size]),
+                    ('relu', [True]),
+                    ('linear', [num_actions, hidden_size])
+                ]
+            elif model_type=="linear":
+                hidden_size = width
+                return [
+                    ('linear', [hidden_size, in_channels]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size, hidden_size]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size, hidden_size]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size * 5, hidden_size]),
+                    ('relu', [True]),
+                    ('rep', []),
+                    ('linear', [num_actions, hidden_size * 5])
+                ]
 
+            elif model_type=="non-linear":
+                hidden_size = width
+                return [
+                    ('linear', [hidden_size, in_channels]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size, hidden_size]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size, hidden_size]),
+                    ('relu', [True]),
+                    ('linear', [hidden_size * 5, hidden_size]),
+                    ('relu', [True]),
+                    ('rep', []),
+                    ('linear', [hidden_size, hidden_size * 5]),
+                    ('relu', [True]),
+                    ('linear', [num_actions, hidden_size])
+
+                ]
 
         elif dataset == "omniglot":
             channels = 256

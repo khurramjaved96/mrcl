@@ -59,7 +59,8 @@ def main(args):
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args.capacity + 1)
 
-    config = mf.ModelFactory.get_model("na", "Sin", in_channels=args.capacity + 1, num_actions=1, width=args.width)
+    config = mf.ModelFactory.get_model(args.model, "Sin", in_channels=args.capacity + 1, num_actions=1,
+                                       width=args.width)
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -85,7 +86,7 @@ def main(args):
     logger.info("Frozen layers = %s", " ".join(frozen_layers))
     for step in range(args.epoch):
 
-        if step == 0 and not args.no_freeze:
+        if step == 0:
             for name, param in maml.named_parameters():
                 logger.info(name)
                 if name in frozen_layers:
@@ -140,7 +141,7 @@ def main(args):
 
                     for t in t1:
                         iterators.append(sampler.sample_task([t]))
-                    x_traj, y_traj, x_rand, y_rand = construct_set(iterators, sampler, steps=40, no_rand=args.no_rand)
+                    x_traj, y_traj, x_rand, y_rand = construct_set(iterators, sampler, steps=40)
                     if torch.cuda.is_available():
                         x_traj, y_traj, x_rand, y_rand = x_traj.cuda(), y_traj.cuda(), x_rand.cuda(), y_rand.cuda()
 
@@ -193,8 +194,8 @@ if __name__ == '__main__':
     argparser.add_argument('--update_lr', type=float, help='task-level inner update learning rate', default=0.003)
     argparser.add_argument('--update_step', type=int, help='task-level inner update steps', default=40)
     argparser.add_argument('--name', help='Name of experiment', default="mrcl_regression")
+    argparser.add_argument('--model', help='Name of model', default="old")
     argparser.add_argument("--commit", action="store_true")
-    argparser.add_argument("--no-rand", action="store_true")
     argparser.add_argument("--width", type=int, default=300)
     argparser.add_argument("--rln", type=int, default=6)
     args = argparser.parse_args()
