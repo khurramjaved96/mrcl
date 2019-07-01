@@ -72,7 +72,7 @@ def main(args):
 
     for step in range(args.steps):
 
-        t1 = np.random.choice(args.classes, np.random.randint(1, args.tasks + 1), replace=False)
+        t1 = np.random.choice(args.classes, args.tasks, replace=False)
 
         d_traj_iterators = []
         for t in t1:

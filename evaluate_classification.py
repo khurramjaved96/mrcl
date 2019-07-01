@@ -35,15 +35,15 @@ def main(args):
         frozen_layers.append("vars." + str(temp))
     logger.info("Frozen layers = %s", " ".join(frozen_layers))
 
-    #
+
     final_results_all = []
-    total_clases = [10, 50, 75, 100, 150, 200]
+    total_clases = args.schedule
     for tot_class in total_clases:
-        lr_list = [0.03, 0.01, 0.003, 0.001, 0.0003, 0.0001, 0.00003, 0.00001]
+        lr_list = [0.03, 0.01, 0.003, 0.001, 0.0003, 0.0001, 0.00003, 0.00001, 0.000003, 0.000001, 0.0000003, 0.0000001]
         for aoo in range(0, args.runs):
 
             keep = np.random.choice(list(range(200)), tot_class)
-
+            #
             if args.dataset == "omniglot":
 
                 dataset = utils.remove_classes_omni(
@@ -206,6 +206,8 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--epoch', type=int, help='epoch number', default=1)
     argparser.add_argument('--seed', type=int, help='epoch number', default=222)
+    argparser.add_argument('--schedule', type=int, nargs='+', default=[10, 50, 75, 100, 150, 200],
+                        help='Decrease learning rate at these epochs.')
     argparser.add_argument('--memory', type=int, help='epoch number', default=0)
     argparser.add_argument('--model', type=str, help='epoch number', default="none")
     argparser.add_argument('--scratch', action='store_true', default=False)
