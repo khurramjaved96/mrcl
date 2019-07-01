@@ -81,7 +81,7 @@ def main(args):
         d_rand_iterator = sampler.get_complete_iterator()
 
         x_spt, y_spt, x_qry, y_qry = maml.sample_training_data(d_traj_iterators, d_rand_iterator,
-                                                               steps=args.update_step)
+                                                               steps=args.update_step, reset=not args.no_reset)
         if torch.cuda.is_available():
             x_spt, y_spt, x_qry, y_qry = x_spt.cuda(), y_spt.cuda(), x_qry.cuda(), y_qry.cuda()
 
@@ -127,6 +127,7 @@ if __name__ == '__main__':
     argparser.add_argument('--name', help='Name of experiment', default="mrcl_classification")
     argparser.add_argument('--dataset', help='Name of experiment', default="omniglot")
     argparser.add_argument("--commit", action="store_true")
+    argparser.add_argument("--no-reset", action="store_true")
     argparser.add_argument("--rln", type=int, default=6)
     args = argparser.parse_args()
 
