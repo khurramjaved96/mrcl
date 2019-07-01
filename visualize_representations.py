@@ -48,10 +48,6 @@ def main(args):
 
     maml = torch.load(args.model, map_location='cpu')
 
-    if args.scratch:
-        config = mf.ModelFactory.get_model("na", args.dataset)
-        maml = learner.Learner(config)
-
     maml = maml.to(device)
 
     reps = []
