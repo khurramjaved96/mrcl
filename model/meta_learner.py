@@ -37,7 +37,9 @@ class MetaLearingClassification(nn.Module):
         weight = self.net.parameters()[-2]
         torch.nn.init.kaiming_normal_(weight)
 
-    def sample_training_data(self, iterators, it2, steps=2):
+    def sample_training_data(self, iterators, it2, steps=2, reset=True):
+
+        # Sample data for inner and meta updates
 
         x_traj = []
         y_traj = []
@@ -50,28 +52,30 @@ class MetaLearingClassification(nn.Module):
         class_to_reset = 0
         for it1 in iterators:
             for img, data in it1:
-                # y_mapping[class_cur] = float(y_mapping[class_cur])
                 class_to_reset = data[0].item()
-                # data[data>-1] = y_mapping[class_cur]
+                if reset:
+                    # Resetting weights corresponding to classes in the inner updates; this prevents
+                    # the learner from memorizing the data (which would kill the gradients due to inner updates)
+                    self.reset_classifer(class_to_reset)
+
                 counter += 1
                 x_traj.append(img)
                 y_traj.append(data)
                 if counter % int(steps / len(iterators)) == 0:
                     class_cur += 1
                     break
-        self.reset_classifer(class_to_reset)
 
+        # To handle a corner case; nothing interesting happening here
         if len(x_traj) < steps:
             it1 = iterators[-1]
             for img, data in it1:
                 counter += 1
-
                 x_traj.append(img)
                 y_traj.append(data)
-                print("Len of iterators = ", len(iterators))
                 if counter % int(steps % len(iterators)) == 0:
                     break
 
+        # Sampling the random batch of data
         counter = 0
         for img, data in it2:
             if counter == 1:
@@ -103,79 +107,86 @@ class MetaLearingClassification(nn.Module):
 
         return x_traj, y_traj, x_rand, y_rand
 
+    def inner_update(self, x, fast_weights, y, bn_training):
+
+        logits = self.net(x, fast_weights, bn_training=bn_training)
+        loss = F.cross_entropy(logits, y)
+        grad = torch.autograd.grad(loss, fast_weights)
+
+        fast_weights = list(
+            map(lambda p: p[1] - self.update_lr * p[0] if p[1].learn else p[1], zip(grad, fast_weights)))
+
+        for params_old, params_new in zip(self.net.parameters(), fast_weights):
+            params_new.learn = params_old.learn
+
+        return fast_weights
+
+    def meta_loss(self, x, fast_weights, y, bn_training):
+
+        logits = self.net(x, fast_weights, bn_training=bn_training)
+        loss_q = F.cross_entropy(logits, y)
+        return loss_q, logits
+
+    def eval_accuracy(self, logits, y):
+        pred_q = F.softmax(logits, dim=1).argmax(dim=1)
+        correct = torch.eq(pred_q, y).sum().item()
+        return correct
+
     def forward(self, x_traj, y_traj, x_rand, y_rand):
         """
 
-        :param x_traj:   [b, setsz, c_, h, w]
-        :param y_traj:   [b, setsz]
-        :param x_rand:   [b, querysz, c_, h, w]
-        :param y_rand:   [b, querysz]
+        :param x_traj:   Input data of sampled trajectory
+        :param y_traj:   Ground truth of the sampled trajectory
+        :param x_rand:   Input data of the random batch of data
+        :param y_rand:   Ground truth of the random batch of data
         :return:
         """
 
-        losses_q = [0 for _ in range(self.update_step + 1)]  # losses_q[i] is the loss on step i
-        corrects = [0 for _ in range(self.update_step + 1)]
+        meta_losses = [0 for _ in range(self.update_step + 1)]  # losses_q[i] is the loss on step i
+        accuracy_meta_set = [0 for _ in range(self.update_step + 1)]
 
-        for i in range(1):
-            logits = self.net(x_traj[0], vars=None, bn_training=False)
-            loss = F.cross_entropy(logits, y_traj[0])
-            grad = torch.autograd.grad(loss, self.net.parameters())
-            # fast_weights = list(map(lambda p: p[1] - self.update_lr * p[0], zip(grad, self.net.parameters())))
+        # Doing a single inner update to get updated weights
 
-            fast_weights = list(
-                map(lambda p: p[1] - self.update_lr * p[0] if p[1].learn else p[1], zip(grad, self.net.parameters())))
-            for params_old, params_new in zip(self.net.parameters(), fast_weights):
-                params_new.learn = params_old.learn
+        fast_weights = self.inner_update(x_traj[0], None, y_traj[0], False)
 
-            # this is the loss and accuracy before first update
+        with torch.no_grad():
+            # Meta loss before any inner updates
+            meta_loss, last_layer_logits = self.meta_loss(x_rand[0], self.net.parameters(), y_rand[0], False)
+            meta_losses[0] += meta_loss
+
+            classification_accuracy = self.eval_accuracy(last_layer_logits, y_rand[0])
+            accuracy_meta_set[0] = accuracy_meta_set[0] + classification_accuracy
+
+            # Meta loss after a single inner update
+            meta_loss, last_layer_logits = self.meta_loss(x_rand[0], fast_weights, y_rand[0], False)
+            meta_losses[1] += meta_loss
+
+            classification_accuracy = self.eval_accuracy(last_layer_logits, y_rand[0])
+            accuracy_meta_set[1] = accuracy_meta_set[1] + classification_accuracy
+
+        for k in range(1, self.update_step):
+            # Doing inner updates using fast weights
+            fast_weights = self.inner_update(x_traj[k], fast_weights, y_traj[k], False)
+
+            # Computing meta-loss with respect to latest weights
+            meta_loss, logits = self.meta_loss(x_rand[0], fast_weights, y_rand[0], False)
+            meta_losses[k + 1] += meta_loss
+
+            # Computing accuracy on the meta and traj set for understanding the learning
             with torch.no_grad():
-                logits_q = self.net(x_rand[0], self.net.parameters(), bn_training=False)
-                loss_q = F.cross_entropy(logits_q, y_rand[0])
-                losses_q[0] += loss_q
+                pred_q = F.softmax(logits, dim=1).argmax(dim=1)
+                classification_accuracy = torch.eq(pred_q, y_rand[0]).sum().item()  # convert to numpy
+                accuracy_meta_set[k + 1] = accuracy_meta_set[k + 1] + classification_accuracy
 
-                pred_q = F.softmax(logits_q, dim=1).argmax(dim=1)
-                correct = torch.eq(pred_q, y_rand[0]).sum().item()
-                corrects[0] = corrects[0] + correct
-
-            with torch.no_grad():
-                # [setsz, nway]
-                logits_q = self.net(x_rand[0], fast_weights, bn_training=False)
-                loss_q = F.cross_entropy(logits_q, y_rand[0])
-                losses_q[1] += loss_q
-
-                pred_q = F.softmax(logits_q, dim=1).argmax(dim=1)
-                correct = torch.eq(pred_q, y_rand[0]).sum().item()
-                corrects[1] = corrects[1] + correct
-
-            for k in range(1, self.update_step):
-
-                logits = self.net(x_traj[k], fast_weights, bn_training=False)
-                loss = F.cross_entropy(logits, y_traj[k])
-                grad = torch.autograd.grad(loss, fast_weights)
-
-                fast_weights = list(
-                    map(lambda p: p[1] - self.update_lr * p[0] if p[1].learn else p[1], zip(grad, fast_weights)))
-
-                for params_old, params_new in zip(self.net.parameters(), fast_weights):
-                    params_new.learn = params_old.learn
-
-                logits = self.net(x_rand[0], fast_weights, bn_training=False)
-                loss_q = F.cross_entropy(logits, y_rand[0])
-                losses_q[k + 1] += loss_q
-
-                with torch.no_grad():
-                    pred_q = F.softmax(logits, dim=1).argmax(dim=1)
-                    correct = torch.eq(pred_q, y_rand[0]).sum().item()  # convert to numpy
-                    corrects[k + 1] = corrects[k + 1] + correct
-
+        # Taking the meta gradient step
         self.optimizer.zero_grad()
-        loss_q = losses_q[-1]
-        loss_q.backward()
+        meta_loss = meta_losses[-1]
+        meta_loss.backward()
 
         self.optimizer.step()
-        accs = np.array(corrects) / len(x_rand[0])
+        accuracies = np.array(accuracy_meta_set) / len(x_rand[0])
 
-        return accs, loss
+        return accuracies, meta_losses
 
 
 class MetaLearnerRegression(nn.Module):
