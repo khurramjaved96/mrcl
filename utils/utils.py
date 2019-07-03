@@ -6,10 +6,47 @@ import random
 from collections import namedtuple
 import logging
 logger = logging.getLogger('experiment')
-
+from torch.nn import functional as F
 import numpy as np
 
 transition = namedtuple('transition', 'state, next_state, action, reward, is_terminal')
+import torch
+
+def set_seed(seed):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+
+def freeze_layers(layers_to_freeze, maml):
+
+    for name, param in maml.named_parameters():
+        param.learn = True
+    frozen_layers = []
+    for temp in range(layers_to_freeze * 2):
+        frozen_layers.append("net.vars." + str(temp))
+
+    for name, param in maml.named_parameters():
+        if name in frozen_layers:
+            logger.info("RLN layer %s", str(name))
+            param.learn = False
+
+    list_of_names = list(filter(lambda x: x[1].learn, maml.named_parameters()))
+
+    for a in list_of_names:
+        logger.info("TLN layer = %s", a[0])
+
+def log_accuracy(maml, my_experiment, iterator_test, device, writer, step):
+    correct = 0
+    torch.save(maml.net, my_experiment.path + "learner.model")
+    for img, target in iterator_test:
+        with torch.no_grad():
+            img = img.to(device)
+            target = target.to(device)
+            logits_q = maml.net(img, vars=None, bn_training=False, feature=False)
+            pred_q = F.softmax(logits_q, dim=1).argmax(dim=1)
+            correct += torch.eq(pred_q, target).sum().item() / len(img)
+    writer.add_scalar('/metatrain/test/classifier/accuracy', correct / len(iterator_test), step)
+    logger.info("Test Accuracy = %s", str(correct / len(iterator_test)))
 
 
 class replay_buffer:
