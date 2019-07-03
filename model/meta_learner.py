@@ -112,9 +112,9 @@ class MetaLearingClassification(nn.Module):
         logits = self.net(x, fast_weights, bn_training=bn_training)
         loss = F.cross_entropy(logits, y)
         if fast_weights is None:
-            grad = torch.autograd.grad(loss, self.net.parameters())
-        else:
-            grad = torch.autograd.grad(loss, fast_weights)
+            fast_weights = self.net.parameters()
+
+        grad = torch.autograd.grad(loss, fast_weights)
 
         fast_weights = list(
             map(lambda p: p[1] - self.update_lr * p[0] if p[1].learn else p[1], zip(grad, fast_weights)))

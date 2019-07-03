@@ -21,6 +21,10 @@ def freeze_layers(layers_to_freeze, maml):
 
     for name, param in maml.named_parameters():
         param.learn = True
+
+    for name, param in maml.net.named_parameters():
+        param.learn = True
+
     frozen_layers = []
     for temp in range(layers_to_freeze * 2):
         frozen_layers.append("net.vars." + str(temp))

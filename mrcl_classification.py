@@ -26,6 +26,8 @@ def main(args):
     # Using first 963 classes of the omniglot as the meta-training set
     args.classes = list(range(963))
 
+
+
     dataset = df.DatasetFactory.get_dataset(args.dataset, background=True, train=True, all=True)
     dataset_test = df.DatasetFactory.get_dataset(args.dataset, background=True, train=False, all=True)
 
@@ -47,6 +49,8 @@ def main(args):
 
     maml = MetaLearingClassification(args, config).to(device)
 
+    utils.freeze_layers(args.rln, maml)
+    
     for step in range(args.steps):
 
         t1 = np.random.choice(args.classes, args.tasks, replace=False)
@@ -72,7 +76,7 @@ def main(args):
             utils.log_accuracy(maml, my_experiment, iterator_test, device, writer, step)
             utils.log_accuracy(maml, my_experiment, iterator_train, device, writer, step)
 
-# 
+#
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--steps', type=int, help='epoch number', default=40000)
