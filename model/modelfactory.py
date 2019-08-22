@@ -91,6 +91,37 @@ class ModelFactory():
                 ('linear', [1000, 1024])
             ]
 
+        elif dataset == "imagenet":
+            channels = 256
+            # channels = 256
+            return [
+                ('conv2d', [channels, 3, 3, 3, 2, 0]),
+                ('relu', [True]),
+                # ('bn', [64]),
+                ('conv2d', [channels, channels, 3, 3, 1, 0]),
+                ('relu', [True]),
+
+                ('conv2d', [channels, channels, 3, 3, 2, 0]),
+                ('relu', [True]),
+
+                ('conv2d', [channels, channels, 3, 3, 1, 0]),
+                ('relu', [True]),
+                # ('bn', [128]),
+                ('conv2d', [channels, channels, 3, 3, 2, 0]),
+                ('relu', [True]),
+                # ('bn', [256]),
+                ('conv2d', [channels, channels, 3, 3, 2, 0]),
+                ('relu', [True]),
+                # ('bn', [512]),
+                ('flatten', []),
+                ('rep', []),
+
+                ('linear', [1024, 9 * channels]),
+                ('relu', [True]),
+                ('linear', [1000, 1024])
+            ]
+
+
 
 
         else:

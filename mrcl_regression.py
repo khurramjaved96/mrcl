@@ -138,7 +138,7 @@ def main(args):
                 for temp in range(0, 20):
                     t1 = np.random.choice(tasks, args.tasks, replace=False)
                     iterators = []
-
+                    #
                     for t in t1:
                         iterators.append(sampler.sample_task([t]))
                     x_traj, y_traj, x_rand, y_rand = construct_set(iterators, sampler, steps=40)

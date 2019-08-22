@@ -5,7 +5,7 @@ import scipy.stats as stats
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
-results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/cedar/OMNIGLOT_PLOTS_PAPER/TTT_Plots"
+results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/Beluga/Train"
 results_dict = {}
 std_dict = {}
 import pandas as pd
@@ -62,5 +62,5 @@ for dd in data:
     #     # plt.errorbar(list(results_dict[folder].keys()), list(results_dict[folder].values()), yerr= list(std_dict[folder].values()) , marker='s')
 
 plt.tight_layout()
-plt.savefig("plots/TTT_scrach_iid.pdf", format="pdf")
+plt.savefig("plots/rebuttal_train.pdf", format="pdf")
 quit()

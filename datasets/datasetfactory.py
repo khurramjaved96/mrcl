@@ -20,6 +20,7 @@ class DatasetFactory:
             else:
                 return om.Omniglot(path, download=True, background=train, transform=train_transform)
 
+
         else:
             print("Unsupported Dataset")
             assert False
