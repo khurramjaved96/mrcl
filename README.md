@@ -17,7 +17,7 @@ This will store the learned model at ../results/DDMonthYYYY/Omniglot/0.0001/mrcl
 
 For learning represenations for Incremental Sine Waves, run:
 ``` bash
-python mrcl_regression.py --update-step 40 --meta_lr 0.0001 --update_lr 0.003 --tasks 10 --capacity 10 --width 300 --rln 6
+python mrcl_regression.py --update_step 40 --meta_lr 0.0001 --update_lr 0.003 --tasks 10 --capacity 10 --width 300 --rln 6
 ```
 This will store the learned model at ../results/DDMonthYYYY/Sin/0.0001/mrcl_regression)
 
