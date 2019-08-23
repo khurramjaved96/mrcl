@@ -24,12 +24,12 @@ This will store the learned model at ../results/DDMonthYYYY/Sin/0.0001/mrcl_regr
 ### Evaluating MRCL Representations 
 We provide trained models at https://drive.google.com/drive/folders/1vHHT5kxtgx8D4JHYg25iA-C31O5OjAQz?usp=sharing which can be used to evaluate performance on the continual learning benchmarks. 
 
-To evaluate performance on omniglot test trajectories of omniglot run: 
+To evaluate performance on test trajectories of omniglot run: 
 ``` bash
 python evaluate_classification.py --rln 6 --model ./trained_models/split_omniglot_mrcl.model --name Omni_test_traj --test --runs 50
 ```
 
-Exclude the --test argument to report result on training trajectories (Used to measure forgetting). 
+Exclude the --test argument to get result on training trajectories (Used to measure forgetting). 
 
 Results will be stored in a json file in "../results/DDMonthYYYY/Omniglot/eval/Omni_test_traj_0"
 
