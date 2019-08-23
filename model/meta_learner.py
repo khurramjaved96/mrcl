@@ -112,8 +112,11 @@ class MetaLearingClassification(nn.Module):
             # print("Itereator no ", class_counter)
             rand_counter = 0
             flag=True
+            inner_counter=0
             for img, data in it1:
+
                 class_to_reset = data[0].item()
+
                 if reset:
                     # Resetting weights corresponding to classes in the inner updates; this prevents
                     # the learner from memorizing the data (which would kill the gradients due to inner updates)
@@ -122,15 +125,9 @@ class MetaLearingClassification(nn.Module):
                 counter += 1
                 # print((counter % int(steps / len(iterators))) != 0)
                 # print(counter)
-                if flag:
-                    # print("Appending", counter)
+                if inner_counter < 5:
                     x_traj.append(img)
                     y_traj.append(data)
-                    if counter % int(25 / len(iterators)) == 0:
-                        flag = False
-                    # if counter % int(steps / len(iterators)) == 0:
-                    #     class_cur += 1
-                    #     break
 
                 else:
                     flag = False
@@ -139,6 +136,7 @@ class MetaLearingClassification(nn.Module):
                     rand_counter += 1
                     if rand_counter==5:
                         break
+                inner_counter+=1
             class_counter += 1
 
 
@@ -158,9 +156,11 @@ class MetaLearingClassification(nn.Module):
         x_rand = x_rand_temp
         y_rand = y_rand_temp
 
-        x_traj, y_traj = torch.stack(x_traj), torch.stack(y_traj)
+        x_traj, y_traj = torch.cat(x_traj).unsqueeze(0), torch.cat(y_traj).unsqueeze(0)
 
-        x_traj, y_traj = x_traj.expand(-1, 25, -1, -1,-1)[0:5], y_traj.expand(-1, 25)[0:5]
+        # print(x_traj.shape, y_traj.shape)
+
+        x_traj, y_traj = x_traj.expand(25, -1, -1, -1,-1)[0:5], y_traj.expand(25, -1)[0:5]
 
         # print(y_traj)
         # print(y_rand)
