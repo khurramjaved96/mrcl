@@ -96,6 +96,78 @@ class MetaLearingClassification(nn.Module):
         # print(y_rand)
         return x_traj, y_traj, x_rand, y_rand
 
+    def sample_few_shot_training_data(self, iterators, it2, steps=2, reset=True):
+
+        # Sample data for inner and meta updates
+
+        x_traj, y_traj, x_rand, y_rand, x_rand_temp, y_rand_temp = [], [], [], [], [], []
+
+        counter = 0
+        #
+        x_rand_temp = []
+        y_rand_temp = []
+
+        class_counter = 0
+        for it1 in iterators:
+            # print("Itereator no ", class_counter)
+            rand_counter = 0
+            flag=True
+            for img, data in it1:
+                class_to_reset = data[0].item()
+                if reset:
+                    # Resetting weights corresponding to classes in the inner updates; this prevents
+                    # the learner from memorizing the data (which would kill the gradients due to inner updates)
+                    self.reset_classifer(class_to_reset)
+
+                counter += 1
+                # print((counter % int(steps / len(iterators))) != 0)
+                # print(counter)
+                if flag:
+                    # print("Appending", counter)
+                    x_traj.append(img)
+                    y_traj.append(data)
+                    if counter % int(25 / len(iterators)) == 0:
+                        flag = False
+                    # if counter % int(steps / len(iterators)) == 0:
+                    #     class_cur += 1
+                    #     break
+
+                else:
+                    flag = False
+                    x_rand_temp.append(img)
+                    y_rand_temp.append(data)
+                    rand_counter += 1
+                    if rand_counter==5:
+                        break
+            class_counter += 1
+
+
+        # Sampling the random batch of data
+        # counter = 0
+        # for img, data in it2:
+        #     if counter == 1:
+        #         break
+        #     x_rand.append(img)
+        #     y_rand.append(data)
+        #     counter += 1
+
+        y_rand_temp = torch.cat(y_rand_temp).unsqueeze(0)
+        x_rand_temp = torch.cat(x_rand_temp).unsqueeze(0)
+
+
+        x_rand = x_rand_temp
+        y_rand = y_rand_temp
+
+        x_traj, y_traj = torch.stack(x_traj), torch.stack(y_traj)
+
+        x_traj, y_traj = x_traj.expand(-1, 25, -1, -1,-1)[0:5], y_traj.expand(-1, 25)[0:5]
+
+        # print(y_traj)
+        # print(y_rand)
+        # print(x_traj.shape, y_traj.shape, x_rand.shape, y_rand.shape)
+        return x_traj, y_traj, x_rand, y_rand
+
+
     def inner_update(self, x, fast_weights, y, bn_training):
 
         logits = self.net(x, fast_weights, bn_training=bn_training)

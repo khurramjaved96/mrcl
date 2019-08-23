@@ -317,25 +317,16 @@ class SampleOmni:
             trainset = copy.deepcopy(self.trainset)
         else:
             trainset = copy.deepcopy(self.testset)
+        class_labels = np.array([x[1] for x in trainset._flat_character_images])
 
-
-        # class_labels = np.array([x[1] for x in trainset._flat_character_images])
-
-        # indices = np.zeros_like(class_labels)
-        data_temp = []
-        labels_temp = []
+        indices = np.zeros_like(class_labels)
         for a in task:
+            indices = indices + (class_labels == a).astype(int)
+        indices = np.nonzero(indices)
 
-            data_temp.append(trainset.data[a])
-            labels_temp.append(trainset.labels[a])
-            # labels_temp.append(trainset.)
-            # indices = indices + (class_labels == a).astype(int)
-        # indices = np.nonzero(indices)
-        #
-        # trainset._flat_character_images = [trainset._flat_character_images[i] for i in indices[0]]
-        trainset.data = data_temp
-        trainset.labels = labels_temp
-        # trainset.targets = [trainset.targets[i] for i in indices[0]]
+        trainset._flat_character_images = [trainset._flat_character_images[i] for i in indices[0]]
+        trainset.data = [trainset.data[i] for i in indices[0]]
+        trainset.targets = [trainset.targets[i] for i in indices[0]]
 
         return trainset
 
