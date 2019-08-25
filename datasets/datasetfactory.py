@@ -1,5 +1,5 @@
 import torchvision.transforms as transforms
-
+import datasets.celeba as celeb
 import datasets.omniglot as om
 
 
@@ -19,6 +19,12 @@ class DatasetFactory:
                                    transform=train_transform, all=all)
             else:
                 return om.Omniglot(path, download=True, background=train, transform=train_transform)
+
+        elif name == "celeba":
+            if train:
+                return celeb.CelebA("../data/celeba", 'train','identity', download=True)
+            else:
+                return celeb.CelebA("../data/celeba", 'val', 'identity', download=True)
 
 
         else:
