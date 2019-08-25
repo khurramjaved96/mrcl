@@ -91,6 +91,51 @@ class ModelFactory():
                 ('linear', [1000, 1024])
             ]
 
+        elif dataset == "omniglot-few":
+            channels = 256
+            # channels = 256
+            return [
+                ('conv2d', [channels, 1, 3, 3, 2, 0]),
+                ('relu', [True]),
+                ('bn', [channels]),
+                ('conv2d', [channels, channels, 3, 3, 1, 0]),
+                ('relu', [True]),
+                ('bn', [channels]),
+                ('conv2d', [channels, channels, 3, 3, 2, 0]),
+                ('relu', [True]),
+                ('bn', [channels]),
+                ('conv2d', [channels, channels, 3, 3, 1, 0]),
+                ('relu', [True]),
+                ('bn', [channels]),
+                ('conv2d', [channels, channels, 3, 3, 2, 0]),
+                ('relu', [True]),
+                ('bn', [channels]),
+                ('conv2d', [channels, channels, 3, 3, 2, 0]),
+                ('relu', [True]),
+                ('bn', [channels]),
+                ('flatten', []),
+                ('rep', []),
+
+                ('linear', [1024, 9 * channels]),
+                ('relu', [True]),
+                ('linear', [1000, 1024])
+            ]
+
+        elif dataset == "omniglot-fc":
+            channels = 256
+            # channels = 256
+            return [
+                ('flatten', []),
+                ('linear', [256, 84*84]),
+                ('relu', [True]),
+                ('linear', [128, 256]),
+                ('relu', [True]),
+                ('linear', [64, 128]),
+                ('relu', [True]),
+                ('rep', []),
+                ('linear', [5, 64]),
+            ]
+
         elif dataset == "imagenet":
             channels = 256
             # channels = 256

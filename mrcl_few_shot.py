@@ -29,18 +29,14 @@ def main(args):
     args.traj_classes = list(range(963))
     #
     dataset = df.DatasetFactory.get_dataset(args.dataset, background=True, train=True, all=True)
-    dataset_test = df.DatasetFactory.get_dataset(args.dataset, background=True, train=False, all=True)
+    dataset_test = df.DatasetFactory.get_dataset(args.dataset, background=False, train=True, all=True)
 
-    # Iterators used for evaluation
-    iterator_test = torch.utils.data.DataLoader(dataset_test, batch_size=5,
-                                                shuffle=True, num_workers=1)
 
-    iterator_train = torch.utils.data.DataLoader(dataset, batch_size=5,
-                                                 shuffle=True, num_workers=1)
+    sampler = ts.SamplerFactory.get_sampler(args.dataset, args.classes, dataset, dataset)
 
-    sampler = ts.SamplerFactory.get_sampler(args.dataset, args.classes, dataset, dataset_test)
+    sampler_test = ts.SamplerFactory.get_sampler(args.dataset, list(range(600)), dataset_test, dataset_test)
 
-    config = mf.ModelFactory.get_model("na", args.dataset)
+    config = mf.ModelFactory.get_model("na", "omniglot-fc")
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -67,15 +63,37 @@ def main(args):
             x_spt, y_spt, x_qry, y_qry = x_spt.cuda(), y_spt.cuda(), x_qry.cuda(), y_qry.cuda()
 
         accs, loss = maml(x_spt, y_spt, x_qry, y_qry)
-
+        #
         # Evaluation during training for sanity checks
-        if step % 40 == 39:
+        if step % 20 == 0:
             writer.add_scalar('/metatrain/train/accuracy', accs[-1], step)
             logger.info('step: %d \t training acc %s', step, str(accs))
-        if step % 300 == 299:
-            utils.log_accuracy(maml, my_experiment, iterator_test, device, writer, step)
-            utils.log_accuracy(maml, my_experiment, iterator_train, device, writer, step)
+            logger.info("Loss = %s", str(loss[-1].item()))
+        if step % 600 == 599:
+            torch.save(maml.net, my_experiment.path + "learner.model")
+            accs_avg = None
+            for temp_temp in range(0, 40):
+                t1_test = np.random.choice(list(range(600)), args.tasks, replace=False)
 
+                d_traj_test_iterators = []
+                for t in t1_test:
+                    d_traj_test_iterators.append(sampler_test.sample_task([t]))
+
+
+                x_spt, y_spt, x_qry, y_qry = maml.sample_few_shot_training_data(d_traj_test_iterators, None,
+                                                                                steps=args.update_step,
+                                                                                reset=not args.no_reset)
+                if torch.cuda.is_available():
+                    x_spt, y_spt, x_qry, y_qry = x_spt.cuda(), y_spt.cuda(), x_qry.cuda(), y_qry.cuda()
+
+                accs, loss = maml.finetune(x_spt, y_spt, x_qry, y_qry)
+                if accs_avg is None:
+                    accs_avg = accs
+                else:
+                    accs_avg += accs
+            logger.info("Loss = %s", str(loss[-1].item()))
+            writer.add_scalar('/metatest/train/accuracy', accs_avg[-1]/40, step)
+            logger.info('TEST: step: %d \t testing acc %s', step, str(accs_avg/40))
 
 #
 if __name__ == '__main__':
