@@ -47,13 +47,13 @@ def main(args):
             if args.dataset == "omniglot":
 
                 dataset = utils.remove_classes_omni(
-                    df.DatasetFactory.get_dataset("omniglot", train=True, background=False), keep)
+                    df.DatasetFactory.get_dataset("omniglot", train=True, background=False, path=args.dataset_path), keep)
                 iterator_sorted = torch.utils.data.DataLoader(
                     utils.iterator_sorter_omni(dataset, False, classes=total_clases),
                     batch_size=1,
                     shuffle=args.iid, num_workers=2)
                 dataset = utils.remove_classes_omni(
-                    df.DatasetFactory.get_dataset("omniglot", train=not args.test, background=False), keep)
+                    df.DatasetFactory.get_dataset("omniglot", train=not args.test, background=False, path=args.dataset_path), keep)
                 iterator = torch.utils.data.DataLoader(dataset, batch_size=32,
                                                        shuffle=False, num_workers=1)
             elif args.dataset == "CIFAR100":
@@ -212,6 +212,7 @@ if __name__ == '__main__':
     argparser.add_argument('--model', type=str, help='epoch number', default="none")
     argparser.add_argument('--scratch', action='store_true', default=False)
     argparser.add_argument('--dataset', help='Name of experiment', default="omniglot")
+    argparser.add_argument('--dataset-path', help='Name of experiment', default=None)
     argparser.add_argument('--name', help='Name of experiment', default="evaluation")
     argparser.add_argument("--commit", action="store_true")
     argparser.add_argument("--no-freeze", action="store_true")

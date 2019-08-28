@@ -23,9 +23,12 @@ class MetaLearingClassification(nn.Module):
         self.update_lr = args.update_lr
         self.meta_lr = args.meta_lr
         self.update_step = args.update_step
-
+        #
         self.net = Learner.Learner(config)
         self.optimizer = optim.Adam(self.net.parameters(), lr=self.meta_lr)
+        self.meta_optim = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, [6000, 10000, 15000], 0.3)
+    #
+
 
     def reset_classifer(self, class_to_reset):
         bias = self.net.parameters()[-1]
@@ -36,6 +39,21 @@ class MetaLearingClassification(nn.Module):
         bias = self.net.parameters()[-1]
         weight = self.net.parameters()[-2]
         torch.nn.init.kaiming_normal_(weight)
+
+    def reset_TLN(self):
+
+        for name, param in self.net.named_parameters():
+            # logger.info(name)
+            if param.learn:
+                logger.info("Resetting param %s", str(param.name))
+                w = nn.Parameter(torch.ones_like(param))
+                # logger.info("W shape = %s", str(len(w.shape)))
+                if len(w.shape) > 1:
+                    torch.nn.init.kaiming_normal_(w)
+                else:
+                    w = nn.Parameter(torch.zeros_like(param))
+                param.data = w
+                param.learn = True
 
     def clip_grad_params(self, params, norm=500):
 
@@ -53,7 +71,7 @@ class MetaLearingClassification(nn.Module):
 
         x_traj, y_traj, x_rand, y_rand, x_rand_temp, y_rand_temp = [], [], [], [], [], []
 
-        counter = 0
+        counter = 1
         #
         x_rand_temp = []
         y_rand_temp = []
@@ -69,10 +87,12 @@ class MetaLearingClassification(nn.Module):
                     # the learner from memorizing the data (which would kill the gradients due to inner updates)
                     self.reset_classifer(class_to_reset)
 
-                counter += 1
-                if not counter % int(steps / len(iterators)) == 0:
+
+                # print(int(steps / len(iterators)))
+                if not counter % (int(steps / len(iterators))+1) == 0:
                     x_traj.append(img)
                     y_traj.append(data)
+                    counter += 1
                     # if counter % int(steps / len(iterators)) == 0:
                     #     class_cur += 1
                     #     break
@@ -104,7 +124,88 @@ class MetaLearingClassification(nn.Module):
         y_rand = torch.cat([y_rand, y_rand_temp], 1)
         # print(y_traj)
         # print(y_rand)
+        # quit()
         return x_traj, y_traj, x_rand, y_rand
+
+    def sample_combined_data(self, iterators, it2, steps=2, reset=True):
+
+        # Sample data for inner and meta updates
+
+        x_traj, y_traj, x_rand, y_rand, x_rand_temp, y_rand_temp = [], [], [], [], [], []
+
+        counter = 0
+        #
+        x_rand_temp = []
+        y_rand_temp = []
+
+        class_counter = 0
+        for it1 in iterators:
+            # print("Itereator no ", class_counter)
+            rand_counter = 0
+            flag=True
+            inner_counter=0
+            for img, data in it1:
+
+                class_to_reset = data[0].item()
+                data[0] = class_counter + 800
+                # print(data[0])
+
+                # if reset:
+                #     # Resetting weights corresponding to classes in the inner updates; this prevents
+                #     # the learner from memorizing the data (which would kill the gradients due to inner updates)
+                #     print("Resetted class = ", class_to_reset)
+                #     self.reset_classifer(class_to_reset)
+
+                counter += 1
+                # print((counter % int(steps / len(iterators))) != 0)
+                # print(counter)
+                if inner_counter < 5:
+                    x_traj.append(img)
+                    y_traj.append(data)
+
+                else:
+                    flag = False
+                    x_rand_temp.append(img)
+                    y_rand_temp.append(data)
+                    rand_counter += 1
+                    if rand_counter==2:
+                        break
+                inner_counter+=1
+            class_counter += 1
+
+        # Sampling the random batch of data
+        counter = 0
+        for img, data in it2:
+            if counter == 1:
+                break
+            x_rand.append(img)
+            y_rand.append(data)
+            counter += 1
+
+
+        y_rand_temp = torch.cat(y_rand_temp).unsqueeze(0)
+        x_rand_temp = torch.cat(x_rand_temp).unsqueeze(0)
+
+        x_rand, y_rand = torch.stack(x_rand), torch.stack(y_rand)
+
+
+        x_rand = torch.cat([x_rand, x_rand_temp], 1)
+        y_rand = torch.cat([y_rand, y_rand_temp], 1)
+
+
+        x_traj, y_traj = torch.cat(x_traj).unsqueeze(0), torch.cat(y_traj).unsqueeze(0)
+
+        # print(x_traj.shape, y_traj.shape)
+
+        x_traj, y_traj = x_traj.expand(5, -1, -1, -1,-1), y_traj.expand(5, -1)
+
+        # print(y_traj)
+        # print(y_rand)
+        # quit()
+        # print(x_traj.shape, x_rand.shape)
+        # quit()
+        return x_traj, y_traj, x_rand, y_rand
+
 
     def sample_few_shot_training_data(self, iterators, it2, steps=2, reset=True):
 
@@ -172,11 +273,9 @@ class MetaLearingClassification(nn.Module):
 
         # print(x_traj.shape, y_traj.shape)
 
-        x_traj, y_traj = x_traj.expand(25, -1, -1, -1,-1)[0:5], y_traj.expand(25, -1)[0:5]
+        x_traj, y_traj = x_traj.expand(5, -1, -1, -1,-1), y_traj.expand(5, -1)
 
-        # print(y_traj)
-        # print(y_rand)
-        # print(x_traj.shape, y_traj.shape, x_rand.shape, y_rand.shape)
+
         return x_traj, y_traj, x_rand, y_rand
 
 
@@ -196,6 +295,24 @@ class MetaLearingClassification(nn.Module):
             params_new.learn = params_old.learn
 
         return fast_weights
+
+    def inner_update_inplace(self, x, y, bn_training):
+
+        logits = self.net(x, None, bn_training=bn_training)
+        loss = F.cross_entropy(logits, y)
+        fast_weights = None
+        if fast_weights is None:
+            fast_weights = self.net.parameters()
+        #
+        grad = torch.autograd.grad(loss, fast_weights)
+
+        fast_weights = list(
+            map(lambda p: p[1] - self.update_lr * p[0] if p[1].learn else p[1], zip(grad, fast_weights)))
+
+        for params_old, params_new in zip(self.net.parameters(), fast_weights):
+            params_old.data = params_new.data
+
+        return None
 
     def meta_loss(self, x, fast_weights, y, bn_training):
 
@@ -274,6 +391,16 @@ class MetaLearingClassification(nn.Module):
         accuracies = np.array(accuracy_meta_set) / len(x_rand[0])
 
         return accuracies, meta_losses
+
+    def update_TLN(self, x_traj, y_traj):
+
+
+        for k in range(0, self.update_step):
+
+            self.inner_update_inplace(x_traj[0], y_traj[0], True)
+
+        return None
+
 
     def finetune(self, x_traj, y_traj, x_rand, y_rand):
         """
@@ -414,6 +541,8 @@ class MetaLearnerRegression(nn.Module):
         self.optimizer.step()
 
         return losses_q
+
+
 
 
 def main():

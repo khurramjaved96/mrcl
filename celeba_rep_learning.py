@@ -16,7 +16,6 @@ logger = logging.getLogger('experiment')
 
 
 def main(args):
-    assert(False)
     utils.set_seed(args.seed)
 
     my_experiment = experiment(args.name, args, "../results/", commit_changes=args.commit)
@@ -27,9 +26,7 @@ def main(args):
     # Using first 963 classes of the omniglot as the meta-training set
     args.classes = list(range(963))
 
-    args.traj_classes = list(range(963))
-
-
+    args.traj_classes = list(range(int(963 / 2), 963))
 
     dataset = df.DatasetFactory.get_dataset(args.dataset, background=True, train=True, all=True)
     dataset_test = df.DatasetFactory.get_dataset(args.dataset, background=True, train=False, all=True)
@@ -53,7 +50,7 @@ def main(args):
     maml = MetaLearingClassification(args, config).to(device)
 
     utils.freeze_layers(args.rln, maml)
-    
+
     for step in range(args.steps):
 
         t1 = np.random.choice(args.traj_classes, args.tasks, replace=False)
@@ -79,6 +76,7 @@ def main(args):
             utils.log_accuracy(maml, my_experiment, iterator_test, device, writer, step)
             utils.log_accuracy(maml, my_experiment, iterator_train, device, writer, step)
 
+
 #
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
@@ -90,7 +88,7 @@ if __name__ == '__main__':
     argparser.add_argument('--update_lr', type=float, help='task-level inner update learning rate', default=0.01)
     argparser.add_argument('--update_step', type=int, help='task-level inner update steps', default=10)
     argparser.add_argument('--name', help='Name of experiment', default="mrcl_classification")
-    argparser.add_argument('--dataset', help='Name of experiment', default="omniglot")
+    argparser.add_argument('--dataset', help='Name of experiment', default="celeba")
     argparser.add_argument("--commit", action="store_true")
     argparser.add_argument("--no-reset", action="store_true")
     argparser.add_argument("--rln", type=int, default=6)

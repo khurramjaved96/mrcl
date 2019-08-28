@@ -1,9 +1,15 @@
-from functools import partial
-import torch
 import os
+from functools import partial
+
 import PIL
-from .vision import VisionDataset
+import torch
+import numpy as np
+import tqdm
+import pickle
+
 from .utils import download_file_from_google_drive, check_integrity, verify_str_arg
+from .vision import VisionDataset
+
 
 # Source : https://github.com/pytorch/vision/blob/master/torchvision/datasets/celeba.py
 
@@ -48,6 +54,7 @@ class CelebA(VisionDataset):
         ("0B7EVK8r0v71pY0NSMzRuSXJEVkk", "d32c9cbf5e040fd4025c592c306e6668", "list_eval_partition.txt"),
     ]
 
+    image_cache = {}
     def __init__(self, root, split="train", target_type="attr", transform=None,
                  target_transform=None, download=False):
         import pandas
@@ -86,11 +93,31 @@ class CelebA(VisionDataset):
 
         self.filename = splits[mask].index.values
         self.identity = torch.as_tensor(identity[mask].values)
-        self.bbox = torch.as_tensor(bbox[mask].values)
-        self.landmarks_align = torch.as_tensor(landmarks_align[mask].values)
+        # self.bbox = torch.as_tensor(bbox[mask].values)
+        # self.landmarks_align = torch.as_tensor(landmarks_align[mask].values)
         self.attr = torch.as_tensor(attr[mask].values)
         self.attr = (self.attr + 1) // 2  # map from {-1, 1} to {0, 1}
-        self.attr_names = list(attr.columns)
+        # self.attr_names = list(attr.columns)
+
+        zeros_array = np.zeros(12000)
+        for a in self.identity:
+            zeros_array[a] += 1
+
+        # self.valid_classes = np.nonzero(zeros_array >= 10)[0]
+
+
+        # arg_sort = np.argsort(self.identity.squeeze())
+        # self.identity = self.identity[arg_sort]
+        # self.filename = [self.filename[x] for x in arg_sort]
+        # self.attr = self.attr[arg_sort]
+
+    def get_valid_classes(self):
+
+        zeros_array = np.zeros(12000)
+        for a in self.identity:
+            zeros_array[a] += 1
+
+        return np.nonzero(zeros_array >= 10)[0]
 
     def _check_integrity(self):
         for (_, md5, filename) in self.file_list:
@@ -114,11 +141,23 @@ class CelebA(VisionDataset):
         for (file_id, md5, filename) in self.file_list:
             download_file_from_google_drive(file_id, os.path.join(self.root, self.base_folder), filename, md5)
 
-        with zipfile.ZipFile(os.path.join(self.root, self.base_folder, "img_align_celeba.zip"), "r") as f:
-            f.extractall(os.path.join(self.root, self.base_folder))
+        # with zipfile.ZipFile(os.path.join(self.root, self.base_folder, "img_align_celeba.zip"), "r") as f:
+        #     f.extractall(os.path.join(self.root, self.base_folder))
+
+
 
     def __getitem__(self, index):
-        X = PIL.Image.open(os.path.join(self.root, self.base_folder, "img_align_celeba", self.filename[index]))
+
+        if False and index in CelebA.image_cache:
+            # print("Getting from cache")
+            X = CelebA.image_cache[index]
+        else:
+            # print(self.filename[index])
+            X = PIL.Image.open(os.path.join(self.root, self.base_folder, "img_align_celeba", self.filename[index]))
+            if self.transform is not None:
+                X = self.transform(X)
+            CelebA.image_cache[index] = X
+            # print(len(CelebA.image_cache))
 
         target = []
         for t in self.target_type:
@@ -135,8 +174,7 @@ class CelebA(VisionDataset):
                 raise ValueError("Target type \"{}\" is not recognized.".format(t))
         target = tuple(target) if len(target) > 1 else target[0]
 
-        if self.transform is not None:
-            X = self.transform(X)
+
 
         if self.target_transform is not None:
             target = self.target_transform(target)
@@ -144,8 +182,11 @@ class CelebA(VisionDataset):
         return X, target
 
     def __len__(self):
-        return len(self.attr)
+        return len(self.filename)
 
     def extra_repr(self):
         lines = ["Target type: {target_type}", "Split: {split}"]
         return '\n'.join(lines).format(**self.__dict__)
+
+
+

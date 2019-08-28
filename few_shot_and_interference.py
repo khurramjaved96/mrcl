@@ -26,7 +26,7 @@ def main(args):
     # Using first 963 classes of the omniglot as the meta-training set
     args.classes = list(range(963))
 
-    args.traj_classes = list(range(963))
+    args.traj_classes = list(range(int(963 / 2), 963))
     #
     dataset = df.DatasetFactory.get_dataset(args.dataset, background=True, train=True, all=True)
     dataset_test = df.DatasetFactory.get_dataset(args.dataset, background=False, train=True, all=True)
@@ -57,7 +57,7 @@ def main(args):
 
         d_rand_iterator = sampler.get_complete_iterator()
 
-        x_spt, y_spt, x_qry, y_qry = maml.sample_few_shot_training_data(d_traj_iterators, d_rand_iterator,
+        x_spt, y_spt, x_qry, y_qry = maml.sample_combined_data(d_traj_iterators, d_rand_iterator,
                                                                steps=args.update_step, reset=not args.no_reset)
         if torch.cuda.is_available():
             x_spt, y_spt, x_qry, y_qry = x_spt.cuda(), y_spt.cuda(), x_qry.cuda(), y_qry.cuda()
@@ -69,7 +69,7 @@ def main(args):
             writer.add_scalar('/metatrain/train/accuracy', accs[-1], step)
             logger.info('step: %d \t training acc %s', step, str(accs))
             logger.info("Loss = %s", str(loss[-1].item()))
-        if step % 600 == 599:
+        if step % 600 == 0:
             torch.save(maml.net, my_experiment.path + "learner.model")
             accs_avg = None
             for temp_temp in range(0, 40):
@@ -79,8 +79,8 @@ def main(args):
                 for t in t1_test:
                     d_traj_test_iterators.append(sampler_test.sample_task([t]))
 
-
-                x_spt, y_spt, x_qry, y_qry = maml.sample_few_shot_training_data(d_traj_test_iterators, None,
+                d_rand_iterator = sampler.get_complete_iterator()
+                x_spt, y_spt, x_qry, y_qry = maml.sample_combined_data(d_traj_test_iterators, d_rand_iterator,
                                                                                 steps=args.update_step,
                                                                                 reset=not args.no_reset)
                 if torch.cuda.is_available():
@@ -103,7 +103,9 @@ def main(args):
                 for t in t1_test:
                     d_traj_test_iterators.append(sampler.sample_task([t]))
 
-                x_spt, y_spt, x_qry, y_qry = maml.sample_few_shot_training_data(d_traj_test_iterators, None,
+                d_rand_iterator = sampler.get_complete_iterator()
+
+                x_spt, y_spt, x_qry, y_qry = maml.sample_few_shot_training_data(d_traj_test_iterators, d_rand_iterator,
                                                                                 steps=args.update_step,
                                                                                 reset=not args.no_reset)
                 if torch.cuda.is_available():
@@ -136,6 +138,6 @@ if __name__ == '__main__':
     argparser.add_argument("--rln", type=int, default=6)
     args = argparser.parse_args()
 
-    args.name = "/".join([args.dataset+"_fewshot", str(args.meta_lr).replace(".", "_"), args.name])
+    args.name = "/".join([args.dataset+"_combined", str(args.meta_lr).replace(".", "_"), args.name])
     print(args)
     main(args)

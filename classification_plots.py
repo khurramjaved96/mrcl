@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/Beluga/Train"
+results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/MRCL/Chelsea_email/600vs30"
 results_dict = {}
 std_dict = {}
 import pandas as pd
@@ -53,7 +54,7 @@ for dd in data:
     df = df.melt('#Classes', var_name='cols', value_name='Accuracy')
     # print(df)
     # # print(df['vals'])
-    # plt.ylim(0, 1)
+    plt.ylim(0, 1)
     print(folders[counter])
     sns.lineplot(x='#Classes', y='Accuracy', data=df, legend='full',label =folders[counter])
     counter+=1
@@ -62,5 +63,5 @@ for dd in data:
     #     # plt.errorbar(list(results_dict[folder].keys()), list(results_dict[folder].values()), yerr= list(std_dict[folder].values()) , marker='s')
 
 plt.tight_layout()
-plt.savefig("plots/rebuttal_train.pdf", format="pdf")
+plt.savefig("plots/finn_fewshot600vs30.pdf", format="pdf")
 quit()
