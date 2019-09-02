@@ -68,10 +68,10 @@ class experiment:
             fh.setFormatter(logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s'))
             logger.addHandler(fh)
 
-            # ch = logging.handlers.logging.StreamHandler()
-            # ch.setLevel(logging.DEBUG)
-            # ch.setFormatter(logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s'))
-            # logger.addHandler(ch)
+            ch = logging.handlers.logging.StreamHandler()
+            ch.setLevel(logging.DEBUG)
+            ch.setFormatter(logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s'))
+            logger.addHandler(ch)
             logger.setLevel(logging.DEBUG)
 
             self.store_json()

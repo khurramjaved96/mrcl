@@ -36,12 +36,15 @@ class CelebaSampler:
     def filter_upto(self, task):
         return self.task_sampler.filter_upto(task)
 
+    def sample_task_no_cache(self, t, train=True):
+        return self.task_sampler.get_no_cache(t)
+
     def sample_task(self, t):
         return self.task_sampler.get(t)
 
     def sample_tasks(self, t, train=False):
         # assert(false)
-        dataset = self.task_sampler.get_task_trainset(t, train)
+        dataset = self.task_sampler.get_task_trainset(t)
         train_iterator = torch.utils.data.DataLoader(dataset,
                                                      batch_size=1,
                                                      shuffle=True, num_workers=1)
@@ -68,10 +71,20 @@ class SampleCeleba:
 
         train_iterator = torch.utils.data.DataLoader(dataset,
                                                      batch_size=1,
-                                                     shuffle=True, num_workers=1)
+                                                     shuffle=True)
         self.iterators[task] = train_iterator
         print("Task %d has been added to the list" % task)
         return train_iterator
+
+    def get_no_cache(self, tasks):
+
+        dataset = self.get_task_trainset(tasks)
+
+        train_iterator = torch.utils.data.DataLoader(dataset,
+                                                     batch_size=12,
+                                                     shuffle=True, num_workers=1)
+        return train_iterator
+
 
     def get(self, tasks):
 

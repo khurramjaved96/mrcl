@@ -48,7 +48,7 @@ def main(args):
 
     utils.freeze_layers(args.rln, maml)
 
-    maml.optimizer = optim.Adam(list(filter(lambda x: not x.learn, maml.net.parameters())), lr=maml.meta_lr)
+    # maml.optimizer = optim.Adam(list(filter(lambda x: not x.learn, maml.net.parameters())), lr=maml.meta_lr)
 
     for step in range(args.steps):
 
@@ -64,8 +64,12 @@ def main(args):
             # print(args.classes[0:counter])
             d_rand_iterator = sampler.sample_task_no_cache(args.classes[0:counter+1])
 
-            x_spt, y_spt, x_qry, y_qry = maml.sample_training_data(d_traj_iterators, d_rand_iterator,
-                                                                   steps=args.update_step, reset=not args.no_reset)
+            if args.memorize:
+                x_spt, y_spt, x_qry, y_qry = maml.sample_training_data_no_generalization(d_traj_iterators, d_rand_iterator,
+                                                                       steps=args.update_step, reset=not args.no_reset)
+            else:
+                x_spt, y_spt, x_qry, y_qry = maml.sample_training_data(d_traj_iterators, d_rand_iterator,
+                                                                       steps=args.update_step, reset=not args.no_reset)
             # print(y_qry)
             # print(y_spt)
             if torch.cuda.is_available():
@@ -105,6 +109,7 @@ if __name__ == '__main__':
     argparser.add_argument("--commit", action="store_true")
     argparser.add_argument('--dataset-path', help='Name of experiment', default=None)
     argparser.add_argument("--no-reset", action="store_true")
+    argparser.add_argument("--memorize", action="store_true")
     argparser.add_argument("--rln", type=int, default=6)
     args = argparser.parse_args()
 

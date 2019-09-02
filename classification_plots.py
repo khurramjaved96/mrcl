@@ -5,8 +5,8 @@ import scipy.stats as stats
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
-results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/Beluga/Train"
-results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/MRCL/Chelsea_email/600vs30"
+results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/MRCL/Chelsea_email/Email_Train_Fixed"
+# results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/Archive/Beluga/New_data"
 results_dict = {}
 std_dict = {}
 import pandas as pd
@@ -21,7 +21,9 @@ for f in os.listdir(results_dir):
         with open(os.path.join(results_dir, f, "metadata.json")) as json_file:
             data_temp = json.load(json_file)
             print(f)
-            data.append(data_temp['results']['Final Results'])
+            data.append(list(filter(lambda x: x[0] <= 200, data_temp['results']['Final Results'])))
+            # print(data_temp['results']['Final Results'])
+            # quit()
         # print(data)e
     # quit()
     # print(f)
@@ -55,6 +57,7 @@ for dd in data:
     # print(df)
     # # print(df['vals'])
     plt.ylim(0, 1)
+    # plt.xlim(0, 200)
     print(folders[counter])
     sns.lineplot(x='#Classes', y='Accuracy', data=df, legend='full',label =folders[counter])
     counter+=1
@@ -63,5 +66,5 @@ for dd in data:
     #     # plt.errorbar(list(results_dict[folder].keys()), list(results_dict[folder].values()), yerr= list(std_dict[folder].values()) , marker='s')
 
 plt.tight_layout()
-plt.savefig("plots/finn_fewshot600vs30.pdf", format="pdf")
+plt.savefig("plots/email_plot_train.pdf", format="pdf")
 quit()
