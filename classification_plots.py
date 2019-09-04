@@ -5,7 +5,7 @@ import scipy.stats as stats
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
-results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/MRCL/Chelsea_email/Email_Train_Fixed"
+results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/MRCL/Chelsea_email/Email_Test_IID"
 # results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/Archive/Beluga/New_data"
 results_dict = {}
 std_dict = {}
