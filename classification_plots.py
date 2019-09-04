@@ -66,5 +66,5 @@ for dd in data:
     #     # plt.errorbar(list(results_dict[folder].keys()), list(results_dict[folder].values()), yerr= list(std_dict[folder].values()) , marker='s')
 
 plt.tight_layout()
-plt.savefig("plots/email_plot_train.pdf", format="pdf")
+plt.savefig("plots/email_plot_test_iid.pdf", format="pdf")
 quit()
