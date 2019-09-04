@@ -1,4 +1,4 @@
-# mrcl
+# mrcl (To be presented at NeurIPS19)
 
 Paper : https://arxiv.org/abs/1905.12588
 
