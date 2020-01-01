@@ -31,7 +31,7 @@ We provide trained models at https://drive.google.com/drive/folders/1vHHT5kxtgx8
 
 To evaluate performance on test trajectories of omniglot run: 
 ``` bash
-python evaluate_classification.py --rln 6 --model ./trained_models/split_omniglot_oml.model --name Omni_test_traj --test --runs 50
+python evaluate_omniglot.py --rln 6 --model ./trained_models/split_omniglot_oml.model --name Omni_test_traj --test --runs 50
 ```
 
 Exclude the --test argument to get result on training trajectories (Used to measure forgetting). 
