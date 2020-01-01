@@ -8,7 +8,7 @@ I will hopefully update the code someday; other things are keeping me busy curre
 Paper : https://arxiv.org/abs/1905.12588
 
 <div>
-<img src="plots/overview.png" alt="Overall system architecture for learning representations" width="100% align="middle">
+<img src="utils/overview_1.png" alt="Overall system architecture for learning representations" width="100% align="middle">
                                                                                                   </div>                                                                                        
 
 
@@ -58,11 +58,11 @@ python visualize_representations.py --name OML_rep_study --model ./trained_model
 
 #### Classification Results
 The accuracy curve averaged over 50 runs as we learn more classes sequentially. The error bars represent 95% confidence intervals drawn using 1,000 bootstraps. We report results on both the training trajectory (left) and a held out dataset that has the same classes as the training trajectory (right).
-![alt text](plots/classification.png "Method Overview")
+![alt text](utils/classification_1.png "Method Overview")
  Online updates starting from OML are capable of learning 200 classes with little to no forgetting. Other representations, such as pretraining and SR-NN suffer from noticeable forgetting on the other hand. OML also generalizes better than the other methods on the unseen held out set. Note that the Oracle, learned using multiple, IID passes over the trajectory, represents an upper bound on the performance, reflecting the inherent inaccuracy when training on an increasing number of classes. 
 #### Regression Results
 Mean squared error across all 10 regression tasks. The x-axis in (a) corresponds to seeing all data points of samples for class 1, then class 2 and so on. These learning curves are averaged over 50 runs, with error bars representing 95% confidence interval drawn by 1,000 bootstraps.
-![alt text](plots/regression.png "Method Overview")
+![alt text](utils/regression_1.png "Method Overview")
 We can see that the representation trained on iid data---pretraining---is not effective for online updating. Notice that in the final prediction accuracy in (b), pretraining and SR-NN representations have accurate predictions for task 10, but high error for earlier tasks. OML, on the other hand, has a slight skew in error towards later tasks in learning but is largely robust.
 
 ### References
