@@ -4,4 +4,4 @@ torch==1.0.1
 torchvision==0.2.2
 tqdm==4.31.1
 tensorboardX==1.6
-tensorflow==1.12.1
+tensorflow==1.15.0
