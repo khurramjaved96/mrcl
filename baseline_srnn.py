@@ -34,7 +34,7 @@ def main(args):
         args.classes = list(range(50))
 
     if args.dataset == "omniglot":
-        iterator = torch.utils.data.DataLoader(utils.remove_classes_omni(dataset, list(range(900))), batch_size=256,
+        iterator = torch.utils.data.DataLoader(utils.remove_classes_omni(dataset, list(range(963))), batch_size=256,
                                                shuffle=True, num_workers=1)
     else:
         iterator = torch.utils.data.DataLoader(utils.remove_classes(dataset, args.classes), batch_size=256,
