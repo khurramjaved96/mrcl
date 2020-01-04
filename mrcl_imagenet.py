@@ -11,6 +11,7 @@ import model.modelfactory as mf
 import utils.utils as utils
 from experiment.experiment import experiment
 from model.meta_learner import MetaLearingClassification
+import datasets.miniimagenet as imgnet
 
 logger = logging.getLogger('experiment')
 
@@ -23,15 +24,25 @@ def main(args):
 
     logger = logging.getLogger('experiment')
 
-    dataset = df.DatasetFactory.get_dataset(args.dataset, background=True, train=True, all=True, path=args.dataset_path)
+    # Using first 963 classes of the omniglot as the meta-training set
+    args.classes = list(range(64))
 
-    valid_classes = dataset.get_valid_classes()
+    # args.traj_classes = list(range(int(64 / 2), 963))
 
-    args.classes = valid_classes
+    dataset = imgnet.MiniImagenet(args.dataset_path, mode='train')
+
+    dataset_test = imgnet.MiniImagenet(args.dataset_path, mode='test')
+
+    # Iterators used for evaluation
+    iterator_test = torch.utils.data.DataLoader(dataset_test, batch_size=5,
+                                                shuffle=True, num_workers=1)
+
+    iterator_train = torch.utils.data.DataLoader(dataset, batch_size=5,
+                                                 shuffle=True, num_workers=1)
 
     sampler = ts.SamplerFactory.get_sampler(args.dataset, args.classes, dataset)
 
-    config = mf.ModelFactory.get_model("na", args.dataset)
+    config = mf.ModelFactory.get_model("na", "imagenet")
 
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -42,12 +53,10 @@ def main(args):
 
     utils.freeze_layers(args.rln, maml)
 
-    print("Total classes = ", len(args.classes))
-
     for step in range(args.steps):
         trajectory = np.random.choice(args.classes, args.traj, replace=False)
 
-        # print("Current trajectory = ", trajectory)
+        print("Current trajectory = ", trajectory)
         # t1 = np.random.choice(args.classes[half_classes:len(args.classes)], args.tasks, replace=False)
         for counter, current_class in enumerate(trajectory):
             t1 = [current_class]
@@ -67,7 +76,7 @@ def main(args):
                 x_spt, y_spt, x_qry, y_qry = x_spt.cuda(), y_spt.cuda(), x_qry.cuda(), y_qry.cuda()
 
             accs, loss = maml(x_spt, y_spt, x_qry, y_qry)
-
+            # print(accs)
             maml.update_TLN(x_spt, y_spt)
             # quit()
         writer.add_scalar('/metatrain/train/accuracy', accs[-1], step)
@@ -98,25 +107,25 @@ def main(args):
 
         maml.reset_TLN()
         maml.reset_layer()
-#
+
 
 #
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--steps', type=int, help='epoch number', default=400000)
-    argparser.add_argument('--traj', type=int, help='epoch number', default=50)
+    argparser.add_argument('--steps', type=int, help='epoch number', default=200000)
     argparser.add_argument('--seed', type=int, help='Seed for random', default=10000)
     argparser.add_argument('--seeds', type=int, nargs='+', help='n way', default=[10])
     argparser.add_argument('--tasks', type=int, help='meta batch size, namely task num', default=1)
     argparser.add_argument('--meta_lr', type=float, help='meta-level outer learning rate', default=1e-4)
     argparser.add_argument('--update_lr', type=float, help='task-level inner update learning rate', default=0.01)
     argparser.add_argument('--update_step', type=int, help='task-level inner update steps', default=5)
-    argparser.add_argument('--name', help='Name of experiment', default="celeba_classification")
-    argparser.add_argument('--dataset', help='Name of experiment', default="celeba")
-    argparser.add_argument('--dataset-path', help='Name of experiment', default=None)
+    argparser.add_argument('--name', help='Name of experiment', default="mrcl_classification")
+    argparser.add_argument('--dataset', help='Name of experiment', default="imagenet")
+    argparser.add_argument('--dataset-path', help='Dataset path', default="~/")
     argparser.add_argument("--commit", action="store_true")
     argparser.add_argument("--no-reset", action="store_true")
     argparser.add_argument("--rln", type=int, default=6)
+    argparser.add_argument('--traj', type=int, help='epoch number', default=10)
     args = argparser.parse_args()
 
     args.name = "/".join([args.dataset, str(args.meta_lr).replace(".", "_"), args.name])

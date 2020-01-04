@@ -8,6 +8,8 @@ import logging
 logger = logging.getLogger('experiment')
 from torch.nn import functional as F
 import numpy as np
+from matplotlib import pyplot as plt
+
 
 transition = namedtuple('transition', 'state, next_state, action, reward, is_terminal')
 import torch
@@ -17,7 +19,60 @@ def set_seed(seed):
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
 
-def freeze_layers(layers_to_freeze, maml):
+class replay_buffer:
+    def __init__(self, buffer_size):
+        self.buffer_size = buffer_size
+        self.location = 0
+        self.buffer = []
+
+    def add(self, *args):
+        # Append when the buffer is not full but overwrite when the buffer is full
+        if len(self.buffer) < self.buffer_size:
+            self.buffer.append(transition(*args))
+        else:
+            self.buffer[self.location] = transition(*args)
+
+        # Increment the buffer location
+        self.location = (self.location + 1) % self.buffer_size
+
+    def sample(self, batch_size):
+        return random.sample(self.buffer, batch_size)
+
+    def sample_trajectory(self, batch_size):
+        initial_index = random.randint(0, len(self.buffer) - batch_size)
+        return self.buffer[initial_index: initial_index + batch_size]
+
+
+class ReservoirSampler:
+    def __init__(self, windows, buffer_size=5000):
+        self.buffer = []
+        self.location = 0
+        self.buffer_size = buffer_size
+        self.window = windows
+        self.total_additions = 0
+
+    def add(self, *args):
+        self.total_additions += 1
+        stuff_to_add = transition(*args)
+
+        M = len(self.buffer)
+        if M < self.buffer_size:
+            self.buffer.append(stuff_to_add)
+        else:
+            i = random.randint(0, min(self.total_additions, self.window))
+            if i < self.buffer_size:
+                self.buffer[i] = stuff_to_add
+        self.location = (self.location + 1) % self.buffer_size
+
+    def sample(self, batch_size):
+        return random.sample(self.buffer, batch_size)
+
+    def sample_trajectory(self, batch_size):
+        initial_index = random.randint(0, len(self.buffer) - batch_size)
+        return self.buffer[initial_index: initial_index + batch_size]
+
+
+def freeze_layers(maml):
 
     for name, param in maml.named_parameters():
         param.learn = True
@@ -26,10 +81,22 @@ def freeze_layers(layers_to_freeze, maml):
         param.learn = True
 
     frozen_layers = []
-    for temp in range(layers_to_freeze * 2):
-        frozen_layers.append("net.vars." + str(temp))
 
+    layer = 0
+    for name, param in maml.net.named_parameters():
+        if "meta" in name:
+            frozen_layers.append("net." +name)
+        else:
+            layer+=1
+            if layer < 6:
+                frozen_layers.append("net."+name)
+
+
+
+
+    # print("Frozen layers", frozen_layers)
     for name, param in maml.named_parameters():
+        # print(name)
         if name in frozen_layers:
             logger.info("RLN layer %s", str(name))
             param.learn = False
@@ -42,12 +109,16 @@ def freeze_layers(layers_to_freeze, maml):
 def log_accuracy(maml, my_experiment, iterator_test, device, writer, step):
     correct = 0
     torch.save(maml.net, my_experiment.path + "learner.model")
+
     for img, target in iterator_test:
         with torch.no_grad():
             img = img.to(device)
             target = target.to(device)
             logits_q = maml.net(img, vars=None, bn_training=False, feature=False)
+
+            # print(target)
             pred_q = F.softmax(logits_q, dim=1).argmax(dim=1)
+            # print(pred_q)
             correct += torch.eq(pred_q, target).sum().item() / len(img)
     writer.add_scalar('/metatrain/test/classifier/accuracy', correct / len(iterator_test), step)
     logger.info("Test Accuracy = %s", str(correct / len(iterator_test)))
@@ -280,3 +351,67 @@ def resize_image(img, factor):
         for b in range(0, img.shape[1]):
             img2[a * factor:(a + 1) * factor, b * factor:(b + 1) * factor] = img[a, b]
     return img2
+
+
+
+
+def get_run(arg_dict, rank=0):
+    # print(arg_dict)
+    combinations =[]
+
+    if isinstance(arg_dict["seed"], list):
+        combinations.append(len(arg_dict["seed"]))
+
+
+    for key in arg_dict.keys():
+        if isinstance(arg_dict[key], list) and not key=="seed":
+            combinations.append(len(arg_dict[key]))
+
+    total_combinations = np.prod(combinations)
+    selected_combinations = []
+    for base in combinations:
+        selected_combinations.append(rank%base)
+        rank = int(rank/base)
+
+    counter=0
+    result_dict = {}
+
+    result_dict["seed"] = arg_dict["seed"]
+    if isinstance(arg_dict["seed"], list):
+        result_dict["seed"] = arg_dict["seed"][selected_combinations[0]]
+        counter += 1
+    #
+
+    for key in arg_dict.keys():
+        if key !="seed":
+            result_dict[key] = arg_dict[key]
+            if isinstance(arg_dict[key], list):
+                result_dict[key] = arg_dict[key][selected_combinations[counter]]
+                counter+=1
+
+    logger.info("Parameters %s", str(result_dict))
+    # 0/0
+    return result_dict
+
+def set_seed(seed):
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    return True
+
+
+def show_images_grid(imgs_, num_images=25):
+    ncols = int(np.ceil(num_images ** 0.5))
+    nrows = int(np.ceil(num_images / ncols))
+    _, axes = plt.subplots(ncols, nrows, figsize=(nrows * 3, ncols * 3))
+    axes = axes.flatten()
+
+    for ax_i, ax in enumerate(axes):
+        if ax_i < num_images:
+            ax.imshow(imgs_[ax_i], cmap='Greys_r', interpolation='nearest')
+            ax.set_xticks([])
+            ax.set_yticks([])
+        else:
+            ax.axis('off')
+    plt.show()
