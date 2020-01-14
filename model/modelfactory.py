@@ -6,6 +6,38 @@ class ModelFactory():
     def get_model(model_type, dataset, in_channels=6, num_actions=6, width=300):
 
         #
+        if "Sin" == dataset:
+            if model_type=="old":
+                hidden_size = width
+                return [
+
+                    ('linear', False, [hidden_size, in_channels]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    # ('rep', []),
+                    ('linear', False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True,  [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+
+                    ('linear', False, [hidden_size, hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [num_actions, hidden_size])
+                ]
+        #
         if dataset == "omniglot-er":
             channels = 128
             # channels = 256

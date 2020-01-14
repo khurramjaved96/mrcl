@@ -17,8 +17,193 @@ class SamplerFactory:
             return OmniglotSampler(tasks, trainset, testset)
         elif "celeba" in dataset:
             return CelebaSampler(tasks, trainset)
-        elif "imagenet":
+        elif "imagenet" in dataset:
             return ImagenetSampler(tasks, trainset, testset)
+        elif "Sin" == dataset:
+            return SineSampler(tasks, capacity=capacity)
+        elif "SinBaseline" in dataset:
+            # assert(False)
+            return SineBaselineSampler(tasks, capacity=capacity)
+
+
+
+
+class SineSampler:
+
+    def __init__(self, tasks, capacity):
+        self.capacity = capacity
+        self.tasks = tasks
+        self.task_sampler = SampleSine(capacity)
+        self.task_sampler.add_complete_iteraetor(self.tasks)
+        self.sample_batch = self.task_sampler.sample_batch
+        self.sample_trajectory = self.task_sampler.sample_trajectory
+
+    def get_complete_iterator(self):
+        return self.task_sampler.complete_iterator
+
+    def sample_random(self):
+        return self.task_sampler.get([np.random.choice(self.tasks)])
+
+    def filter_upto(self, task):
+        return self.task_sampler.filter_upto(task)
+
+    def sample_task(self, t):
+        return self.task_sampler.get(t)
+
+    def sample_tasks(self, t):
+        return self.task_sampler.get_task_trainset(t)
+
+
+class SineBaselineSampler:
+
+    def __init__(self, tasks, capacity):
+        self.capacity = capacity
+        self.tasks = tasks
+        self.task_sampler = SampleSineBaseline(capacity)
+        self.task_sampler.add_complete_iteraetor(self.tasks)
+        self.sample_batch = self.task_sampler.sample_batch
+        self.sample_trajectory = self.task_sampler.sample_trajectory
+
+    def get_complete_iterator(self):
+        return self.task_sampler.complete_iterator
+
+    def sample_random(self):
+        return self.task_sampler.get([np.random.choice(self.tasks)])
+
+    def filter_upto(self, task):
+        return self.task_sampler.filter_upto(task)
+
+    def sample_task(self, t):
+        return self.task_sampler.get(t)
+
+    def sample_tasks(self, t):
+        return self.task_sampler.get_task_trainset(t)
+
+
+class SampleSineBaseline:
+
+    def __init__(self, capacity):
+        self.task_iterators = []
+        self.iterators = {}
+        self.capacity = capacity
+
+    def add_complete_iteraetor(self, tasks):
+        pass
+
+    def add_task_iterator(self, task):
+
+        amplitude = (np.random.rand() + 0.02) * (5)
+        phase = np.random.rand() * np.pi
+        decay = np.random.rand() * 0.4
+        frequency = np.random.rand() * 2 + 1.0
+
+        self.iterators[task] = {'id': task, 'phase': phase, 'amplitude': amplitude, 'decay': decay,
+                                'frequency': frequency}
+
+        logger.info("Task %d has been added to the list with phase %f and amp %f", task, phase, amplitude)
+
+        return self.iterators[task]
+
+    def get(self, tasks):
+        for task in tasks:
+            if task in self.iterators:
+                return self.iterators[task]
+            else:
+                return self.add_task_iterator(task)
+
+    def sample_batch(self, task, task_id, samples=10):
+
+        x_samples = np.random.rand(samples) * 10 - 5
+
+        x = np.zeros((samples, 11))
+        x[:, 10] = x_samples
+
+        x[:, task_id % 10] = 1
+
+        targets = np.zeros((len(x_samples), 2))
+        targets[:, 0] = task['amplitude'] * np.sin(x_samples + task['phase'])
+
+        targets[:, 1] = int(float(task_id) / 10)
+
+        return torch.tensor(x).float(), torch.tensor(targets).float()
+
+    def sample_trajectory(self, task, len, test=False):
+        xs = []
+        ys = []
+
+        for t in range(0, len):
+            x = float(t) / 20
+
+            y = task['amplitude'] * np.e ** (-x * task['decay']) * np.sin(
+                2 * np.pi * x / task['frequency'] + task['phase'])
+            xs.append(x)
+            ys.append(y)
+
+        return torch.tensor(xs).float(), torch.tensor(ys).float()
+
+
+class SampleSine:
+    # Task sampler for the trainset (PyTorch really needs to fix the hard-coded "trainset" variable and change it with a dictionary that takes "train"/"test" as an argument
+
+    def __init__(self, capacity):
+        self.task_iterators = []
+        self.iterators = {}
+        self.capacity = capacity
+
+    def add_complete_iteraetor(self, tasks):
+        pass
+
+    def add_task_iterator(self, task):
+
+        amplitude = (np.random.rand() + 0.02) * (5)
+        phase = np.random.rand() * np.pi
+        decay = np.random.rand() * 0.4
+        frequency = np.random.rand() * 2 + 1.0
+
+        self.iterators[task] = {'id': task, 'phase': phase, 'amplitude': amplitude, 'decay': decay,
+                                'frequency': frequency}
+
+        # logger.info("Task %d has been added to the list with phase %f and amp %f", task, phase, amplitude)
+
+        return self.iterators[task]
+
+    # def sample_batch(self, tasks):
+
+    def get(self, tasks):
+        for task in tasks:
+            if task in self.iterators:
+                return self.iterators[task]
+            else:
+                return self.add_task_iterator(task)
+
+    def sample_batch(self, task, task_id, samples=10):
+
+        x_samples = np.random.rand(samples) * 10 - 5
+        x = np.zeros((len(x_samples), 2))
+
+        x = np.zeros((samples, self.capacity))
+        x[:, self.capacity - 1] = x_samples
+        assert (task_id <= self.capacity - 1)
+        x[:, task_id] = 1
+
+        targets = np.zeros((len(x_samples), 2))
+        targets[:, 0] = task['amplitude'] * np.sin(x_samples + task['phase'])
+        targets[:, 1] = 0
+        return torch.tensor(x).float(), torch.tensor(targets).float()
+
+    def sample_trajectory(self, task, len, test=False):
+        xs = []
+        ys = []
+
+        for t in range(0, len):
+            x = float(t) / 20
+
+            y = task['amplitude'] * np.e ** (-x * task['decay']) * np.sin(
+                2 * np.pi * x / task['frequency'] + task['phase'])
+            xs.append(x)
+            ys.append(y)
+
+        return torch.tensor(xs).float(), torch.tensor(ys).float()
 
 
 
