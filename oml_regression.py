@@ -134,7 +134,7 @@ def main():
         # print(x_spt, y_spt)
         accs = maml(x_traj, y_traj, x_rand, y_rand)
         maml.meta_optim.step()
-        # maml.meta_optim_plastic.step()
+        maml.meta_optim_plastic.step()
 
         if step in [0, 2000, 3000, 4000]:
             for param_group in maml.optimizer.param_groups:
@@ -198,7 +198,10 @@ def main():
 
                                 mask = net.meta_vars[counter]
                                 # print(g.shape, mask.shape)
-                                temp_weight = p - lrs * g * torch.sigmoid(mask)
+                                if not args["no_plasticity"]:
+                                    temp_weight = p - lrs * gs
+                                else:
+                                    temp_weight = p - lrs * g * torch.sigmoid(mask)
                                 counter += 1
                                 if counter > 6 or temp < 1 or True:
                                     p.data = temp_weight

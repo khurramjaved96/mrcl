@@ -21,7 +21,7 @@ class Learner(nn.Module):
 
     """
 
-    def __init__(self, config, learn=False):
+    def __init__(self, config):
         """
 
         :param config: network config file, type:list of (string, list)
@@ -50,7 +50,9 @@ class Learner(nn.Module):
                 w.learn = learn
                 self.vars.append(w)
                 # [ch_out]
-                self.vars.append(nn.Parameter(torch.zeros(param[0])))
+                b = nn.Parameter(torch.zeros(param[0]))
+                b.learn = learn
+                self.vars.append(b)
 
             elif name is 'convt2d':
                 # [ch_in, ch_out, kernelsz, kernelsz, stride, padding]
@@ -78,13 +80,13 @@ class Learner(nn.Module):
                 self.vars.append(b)
 
                 if learn:
-                    w = nn.Parameter(torch.ones(*param))
+                    w = nn.Parameter(torch.zeros(*param))
                     # torch.nn.init.zeros_(w)
-                    torch.nn.init.normal_(w, mean=1000,std=0.1)
+                    # torch.nn.init.normal_(w)
                     # w = w*100
                     self.meta_vars.append(w)
                     b = nn.Parameter(torch.zeros(param[0]))
-                    torch.nn.init.normal_(b, mean=1000, std=0.1)
+                    # torch.nn.init.normal_(b)
                     # b = b*100
                     self.meta_vars.append(b)
                     w.learn = False
@@ -180,6 +182,9 @@ class Learner(nn.Module):
         #     else:
         #         raise NotImplementedError
 
+    def decay_plasticity(self, decay_rate):
+        for param in self.meta_vars:
+            param = param*decay_rate
     def extra_repr(self):
         info = ''
 
@@ -243,7 +248,7 @@ class Learner(nn.Module):
         :param bn_training: set False to not update
         :return: x, loss, likelihood, kld
         """
-
+        x = x.float()
         if vars is None:
             vars = self.vars
 

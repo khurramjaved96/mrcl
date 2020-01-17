@@ -14,6 +14,7 @@ import model.modelfactory as mf
 from experiment.experiment import experiment
 from model.meta_learner import MetaLearnerRegression
 from utils import utils
+import numpy as np
 
 logger = logging.getLogger('experiment')
 
@@ -84,7 +85,9 @@ def main():
 
     maml = MetaLearnerRegression(args, config).to(device)
     old_model = maml.net
-    maml.net = net = torch.load("/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/1_1/net.model", map_location="cpu")
+    # maml.net = net = torch.load("/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/1_1/net.model", map_location="cpu")
+    maml.net = net = torch.load("/Volumes/Macintosh HD/Users/khurramjaved96/2020Git/small_net_0_15.model",
+                                map_location="cpu")
     for old, new in zip(old_model.parameters(), maml.net.parameters()):
         new.learn = old.learn
         print("Learn = ", new.learn)
@@ -132,6 +135,7 @@ def main():
     #         param.learn = False
 
     old_net = copy.deepcopy(maml.net)
+
     for lrs in [0.003]:
         lr_results = {}
         lr_results[lrs] = []
@@ -141,15 +145,15 @@ def main():
             #
             for t in t1:
                 iterators.append(sampler.sample_task([t]))
-            x_traj, y_traj, x_rand, y_rand = construct_set(iterators, sampler, steps=40)
+            x_traj, y_traj, x_rand, y_rand = construct_set(iterators, sampler, steps=10)
             if torch.cuda.is_available():
                 x_traj, y_traj, x_rand, y_rand = x_traj.cuda(), y_traj.cuda(), x_rand.cuda(), y_rand.cuda()
 
-            net = maml.net
+            net = copy.deepcopy(maml.net)
 
             # net = torch.load("/Volumes/Macintosh HD/Users/khurramjaved96/ICML_2020/pretrained_plasticity5/1_1/net.model", map_location="cpu")
-            # for params_old, params_new in zip(net_old.parameters(), net.parameters()):
-            #     params_new.learn = params_old.learn
+            for params_old, params_new in zip(maml.net.parameters(), net.parameters()):
+                params_new.learn = params_old.learn
 
             for (name, p) in net.named_parameters():
                 if "meta" in name:
@@ -169,23 +173,29 @@ def main():
                 #     grad = torch.autograd.grad(loss, net.parameters())
 
                 import matplotlib.pyplot as  plt
-                # for (name, param) in net.named_parameters():
-                #     print(name, param.learn)
+                for (name, param) in net.named_parameters():
 
-                    # if "meta" in name:
-                    #     print("Avg plasticity", torch.mean(torch.sigmoid(param)))
-                    #     histo_plas = torch.sigmoid(param).flatten().detach().numpy()
-                        # plt.hist(histo_plas)
-                        # plt.title(name)
+                    if "meta" in name and k ==0:
+
+                        # print(param)
+                        histo_plas = torch.sigmoid(param).detach().numpy()
+                        # if len(histo_plas.shape) > 1:
+                        #     # print(histo_plas.shape)
+                        #     plt.imshow(histo_plas)
+                        #     plt.colorbar()
+                        #     plt.show()
+                        #     plt.clf()
+
+
+                        histo_plas = torch.sigmoid(param).flatten().detach().numpy()
+                        plt.hist(histo_plas)
+                        plt.title(name)
+                        plt.show()
+                        plt.clf()
                         #
                         # plt.savefig(my_experiment.path+name+".pdf", format="pdf")
-                        # histo_plas = np.histogram(histo_plas)
-                        # print("Histogram = ", histo_plas)
-                        # print(histo_plas.)
-
-                    # if param.grad is not None:
-                    #     print("Avg grad", torch.mean(torch.abs(param.grad)))
-
+                        # plt.clf()
+                0/0
                 fast_weights = []
                 counter = 0
                 for g, (name, p) in zip(grad, net.named_parameters()):
@@ -196,15 +206,41 @@ def main():
                         mask = net.meta_vars[counter]
                         # print(g.shape, mask.shape)
                         temp_weight = p - lrs * g * torch.sigmoid(mask)
+                        plasticity_plot = torch.sigmoid(mask).detach().numpy()
+                        weight_plot = p.detach().numpy()
+                        gradient_plot = g.detach().numpy()
+                        if len(weight_plot.shape) > 1:
+                            plt.imshow(plasticity_plot)
+                            plt.title("Plasticity "+name + str(counter))
+                            plt.colorbar()
+                            plt.show()
+                            plt.clf()
+                            plt.imshow(weight_plot)
+                            plt.title("Weight " + name + str(counter))
+                            plt.colorbar()
+                            plt.show()
+                            plt.clf()
+                            plt.imshow(gradient_plot)
+                            plt.title("Gradient " + name + str(counter))
+                            plt.colorbar()
+                            plt.show()
+                            plt.clf()
+
+                            plt.imshow(gradient_plot*plasticity_plot)
+                            plt.title("Effective gradient" + name + str(counter))
+                            plt.colorbar()
+                            plt.show()
+                            plt.clf()
+
                         counter += 1
-                        if counter>6 or temp < 1 or True:=
+                        if counter>6 or temp < 1 or True:
                             p.data = temp_weight
                     else:
                         temp_weight = p
                     fast_weights.append(temp_weight)
 
-
-            #
+                # 0/0
+            0/0
             with torch.no_grad():
                 logits = net(x_rand[0], vars=None, bn_training=False)
                 # print("Logits = ", logits)

@@ -5,9 +5,28 @@ class ModelFactory():
     @staticmethod
     def get_model(model_type, dataset, in_channels=6, num_actions=6, width=300):
 
-        #
+
         if "Sin" == dataset:
-            if model_type=="old":
+            # if model_type=="old":
+            #     hidden_size = width
+            #     return [
+            #
+            #         ('linear', False, [hidden_size, in_channels]),
+            #         # ('bn', [hidden_size]),
+            #         ('relu', True, [True]),
+            #         ('linear', True, [hidden_size, hidden_size]),
+            #         # ('bn', [hidden_size]),
+            #         ('relu', True, [True]),
+            #
+            #
+            #         ('linear', False, [hidden_size, hidden_size]),
+            #         ('relu', True, [True]),
+            #         ('linear', True, [hidden_size, hidden_size]),
+            #         ('relu', True, [True]),
+            #         ('linear', True, [num_actions, hidden_size])
+            #     ]
+        #
+            if model_type == "old":
                 hidden_size = width
                 return [
 
@@ -21,7 +40,7 @@ class ModelFactory():
                     ('linear', False, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', True, [True]),
-                    ('linear', True,  [hidden_size, hidden_size]),
+                    ('linear', True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', True, [True]),
                     ('linear', False, [hidden_size, hidden_size]),
@@ -37,7 +56,91 @@ class ModelFactory():
                     ('relu', True, [True]),
                     ('linear', True, [num_actions, hidden_size])
                 ]
-        #
+
+
+            if model_type == "anml":
+                hidden_size = width
+                return [
+
+                    ('linear', False, [hidden_size, in_channels]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    # ('rep', []),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, [True]),
+
+                    ('linear', False, [hidden_size, hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [num_actions, hidden_size])
+                ]
+
+            if model_type == "mrcl":
+                hidden_size = width
+                return [
+
+                    ('linear', False, [hidden_size, in_channels]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, [True]),
+                    ('linear', False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, [True]),
+                    # ('rep', []),
+                    ('linear', False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, [True]),
+                    ('linear', False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, [True]),
+                    ('linear', False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, [True]),
+                    ('linear', False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, [True]),
+
+                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, [True]),
+                    ('linear', True, [num_actions, hidden_size])
+                ]
+
+        elif dataset == "atari":
+            width = 300
+            return [
+                ('conv2d', False, [32, in_channels, 8, 8, 4, 0]),
+                ('relu', False, [True]),
+                ('conv2d', False, [64, 32, 4, 4, 2, 0]),
+                ('relu', False, [True]),
+                ('conv2d', False, [64, 64, 3, 3, 1, 0]),
+                ('relu', False, [True]),
+                ('flatten', True, []),
+                ('rep', True, []),
+                ('linear', True, [512, 3136]),
+                ('relu', False, [True]),
+                # ('linear', [512, 512]),
+                # ('relu', [True]),
+                # ('linear', [512, 512]),
+                # ('relu', [True]),
+                ('linear', True, [num_actions, 512])
+            ]
+
+
         if dataset == "omniglot-er":
             channels = 128
             # channels = 256
