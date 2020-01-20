@@ -45,7 +45,7 @@ class experiment:
             # logger.info("Git hash for current experiment : %s", self.git_hash)
         if not args is None:
             if rank is not None:
-                self.name = name + str(rank)+"/"+str(seed)
+                self.name = name + str(rank) + "/" + str(seed)
             else:
                 self.name = name
             self.params = args
@@ -66,7 +66,6 @@ class experiment:
 
             ver = 0
 
-
             while True:
                 ver += 1
                 if not os.path.exists(full_path + "_" + str(ver)):
@@ -77,17 +76,19 @@ class experiment:
                         pass
             self.path = full_path + "_" + str(ver) + "/"
 
-
             fh = logging.FileHandler(self.path + "log.txt")
             fh.setLevel(logging.DEBUG)
-            fh.setFormatter(logging.Formatter('rank:'+str(args['rank'])+' %(name)-12s: %(levelname)-8s %(message)s'))
+            fh.setFormatter(
+                logging.Formatter('rank:' + str(args['rank']) + ' ' + name + ' %(levelname)-8s %(message)s'))
             logger.addHandler(fh)
 
             ch = logging.handlers.logging.StreamHandler()
             ch.setLevel(logging.DEBUG)
-            ch.setFormatter(logging.Formatter('rank:'+str(args['rank'])+' %(name)-12s: %(levelname)-8s %(message)s'))
+            ch.setFormatter(
+                logging.Formatter('rank:' + str(args['rank']) + ' ' + name + ' %(levelname)-8s %(message)s'))
             logger.addHandler(ch)
             logger.setLevel(logging.DEBUG)
+            logger.propagate = False
 
             self.store_json()
 

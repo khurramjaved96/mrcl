@@ -26,9 +26,10 @@ class MetaLearnerRegression(nn.Module):
         self.meta_lr = args["meta_lr"]
         self.update_step = args["update_step"]
         self.plasticity = not args["no_plasticity"]
-        self.plasticity_lr = args["plasticity_lr"]
+        self.neuro = not args["no_neuro"]
         self.second_order = args['second_order']
-        self.plasticity_decay = args['plasticity_decay']
+        self.sigmoid = not args["no_sigmoid"]
+        self.other_params = []
 
         if args['model_path'] is not None:
             net_old = Learner.Learner(config)
@@ -40,21 +41,29 @@ class MetaLearnerRegression(nn.Module):
             for (name, param) in self.net.named_parameters():
                 if "meta" in name:
                     param.learn = False
-                # print("New", name, param.learn)
+                elif "neuro" in name:
+                    param.learn = False
+
         else:
             self.net = Learner.Learner(config)
+        neuro_weights = []
         plastic_weights = []
         other_weights = []
         for name, param in self.net.named_parameters():
             if "meta" in name:
                 plastic_weights.append(param)
+            elif "neuro" in name:
+                neuro_weights.append(param)
             else:
+                # if  param.learn:
+                #     print("Weight in meta-optimizer = ", name)
                 other_weights.append(param)
-
+        self.other_params = other_weights
         self.optimizer = optim.Adam(other_weights, lr=self.meta_lr)
-        self.optimizer_plastic = optim.Adam(plastic_weights, lr=self.plasticity_lr)
-        self.meta_optim = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, [2000, 4000, 6000], 0.3)
-        self.meta_optim_plastic = torch.optim.lr_scheduler.MultiStepLR(self.optimizer_plastic, [2000, 4000, 6000], 0.3)
+        self.optimizer_plastic = optim.Adam(plastic_weights, lr=args["plasticity_lr"])
+        self.optimizer_neuromodulation = optim.Adam(neuro_weights, lr=args["modulation_lr"])
+        self.meta_optim = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, [800, 2000, 3000], 0.3)
+        self.meta_optim_plastic = torch.optim.lr_scheduler.MultiStepLR(self.optimizer_plastic, [800, 2000, 3000], 0.3)
 
     #
     def clip_grad(self, grad, norm=10):
@@ -89,25 +98,30 @@ class MetaLearnerRegression(nn.Module):
             logits_select.append(logits[no, val])
         logits = torch.stack(logits_select).unsqueeze(1)
         loss = F.mse_loss(logits, y_traj[0, :, 0].unsqueeze(1))
-        grad = self.clip_grad(torch.autograd.grad(loss, self.net.parameters(), create_graph=self.second_order))
+
+        grad = self.clip_grad(torch.autograd.grad(loss, list(filter(lambda x: x.learn, list(self.net.parameters()))), create_graph=self.second_order))
 
         fast_weights = []
         counter = 0
-        for g, (name, p) in zip(grad, self.net.named_parameters()):
-            if p.learn:
-                mask = self.net.meta_vars[counter]
-                # if counter==0:
-                #     print(torch.sigmoid(mask))
-                if self.plasticity:
-                    temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
-                else:
-                    temp_weight = p - self.update_lr * g
-                # if counter==0:
-                #     print(mask)
-                counter += 1
+
+        for (name, p) in self.net.named_parameters():
+            if "meta" in name or "neuro" in name:
+                pass
             else:
-                temp_weight = p
-            fast_weights.append(temp_weight)
+                if p.learn:
+                    g = grad[counter]
+                    mask = self.net.meta_plasticity[counter]
+                    if self.plasticity:
+                        if self.sigmoid:
+                            temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
+                        else:
+                            temp_weight = p - self.update_lr * g * mask
+                    else:
+                        temp_weight = p - self.update_lr * g
+                    counter += 1
+                else:
+                    temp_weight = p
+                fast_weights.append(temp_weight)
 
         for params_old, params_new in zip(self.net.parameters(), fast_weights):
             params_new.learn = params_old.learn
@@ -123,6 +137,7 @@ class MetaLearnerRegression(nn.Module):
             losses_q[0] += loss_q
         #
         for k in range(1, len(x_traj)):
+
             logits = self.net(x_traj[k], fast_weights, bn_training=False)
 
             logits_select = []
@@ -131,17 +146,21 @@ class MetaLearnerRegression(nn.Module):
             logits = torch.stack(logits_select).unsqueeze(1)
 
             loss = F.mse_loss(logits, y_traj[k, :, 0].unsqueeze(1))
-            grad = self.clip_grad(torch.autograd.grad(loss, fast_weights, create_graph=self.second_order))
+
+            grad = self.clip_grad(torch.autograd.grad(loss, list(filter(lambda x: x.learn, fast_weights)), create_graph=self.second_order))
 
             fast_weights_new = []
             counter = 0
-            for g, p in zip(grad, fast_weights):
+            for p in fast_weights:
                 if p.learn:
-                    mask = self.net.meta_vars[counter]
-                    # if counter==0:
-                    #     print(torch.sigmoid(mask))
+                    g = grad[counter]
+                    mask = self.net.meta_plasticity[counter]
                     if self.plasticity:
-                        temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
+                        if self.sigmoid:
+                            temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
+                        else:
+                            temp_weight = p - self.update_lr * g * mask
+
                     else:
                         temp_weight = p - self.update_lr * g
 
@@ -150,13 +169,13 @@ class MetaLearnerRegression(nn.Module):
                     temp_weight = p
                 fast_weights_new.append(temp_weight)
             fast_weights = fast_weights_new
-
-            for params_old, params_new in zip(self.net.parameters(), fast_weights):
+            #
+            for params_old, params_new in zip(self.other_params, fast_weights):
                 params_new.learn = params_old.learn
 
         logits_q = self.net(x_rand[0, 0:int((k + 1) * len(x_rand[0]) / len(x_traj)), :], fast_weights,
                             bn_training=True)
-
+        #
         logits_select = []
         for no, val in enumerate(y_rand[0, 0:int((k + 1) * len(x_rand[0]) / len(x_traj)), 1].long()):
             logits_select.append(logits_q[no, val])
@@ -168,6 +187,8 @@ class MetaLearnerRegression(nn.Module):
         self.optimizer.zero_grad()
         if self.plasticity:
             self.optimizer_plastic.zero_grad()
+        if self.neuro:
+            self.optimizer_neuromodulation.zero_grad()
         # self.optimizer_plasticity.zero_grad()
         loss_q = losses_q[k + 1]
         loss_q.backward()
@@ -175,8 +196,17 @@ class MetaLearnerRegression(nn.Module):
         self.optimizer.step()
         if self.plasticity:
             self.optimizer_plastic.step()
+        if self.neuro:
+            self.optimizer_neuromodulation.step()
 
-        # self.net.decay_plasticity(self.plasticity_decay)
+        # for name, param in self.net.named_parameters():
+        #     if "neuro" in name:
+        #         print(param.data)
+        #         break
+        #         # neuro_weights.append(param)
+        losses_q[k+1] = losses_q[k+1].detach()
+        losses_q[0] = losses_q[0].detach()
+        # losses_q = [0 for _ in range(len(x_traj) + 1)]
         return losses_q
 
 
@@ -786,10 +816,12 @@ class MetaRL2(nn.Module):
         self.plasticity = not args["no_plasticity"]
         self.plasticity_lr = args["plasticity_lr"]
         self.second_order = args['second_order']
+        self.sigmoid = not args["no_sigmoid"]
         self.plasticity_decay = args['plasticity_decay']
 
         if args['model_path'] is not None:
             net_old = Learner.Learner(config)
+
             logger.info("Loading model from path %s", args["model_path"])
             self.net = torch.load(args['model_path'], map_location='cpu')
             list_of_param = list(net_old.parameters())
@@ -812,10 +844,6 @@ class MetaRL2(nn.Module):
         self.optimizer = optim.Adam(other_weights, lr=self.meta_lr)
         self.optimizer_plastic = optim.Adam(plastic_weights, lr=self.plasticity_lr)
 
-    def forget(self):
-        bias = self.net.parameters()[-1]
-        weight = self.net.parameters()[-2]
-        torch.nn.init.kaiming_normal_(weight)
 
     def clip_grad(self, grad, norm=10):
         grad_clipped = []
@@ -859,20 +887,35 @@ class MetaRL2(nn.Module):
 
         loss = F.smooth_l1_loss(y_traj[0], logits)
 
-        grad = self.clip_grad(torch.autograd.grad(loss, self.net.parameters(), create_graph=self.second_order))
+        grad = self.clip_grad(torch.autograd.grad(loss, list(filter(lambda x: x.learn, list(self.net.parameters()))),
+                                                  create_graph=self.second_order))
+
         fast_weights = []
         counter = 0
-        for g, (name, p) in zip(grad, self.net.named_parameters()):
-            if p.learn:
-                mask = self.net.meta_vars[counter]
-                temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
-                counter += 1
+
+        for (name, p) in self.net.named_parameters():
+            if "meta" in name or "neuro" in name:
+                pass
             else:
-                temp_weight = p
-            fast_weights.append(temp_weight)
+                if p.learn:
+                    g = grad[counter]
+                    mask = self.net.meta_plasticity[counter]
+                    if self.plasticity:
+                        if self.sigmoid:
+                            temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
+                        else:
+                            temp_weight = p - self.update_lr * g * mask
+                    else:
+                        temp_weight = p - self.update_lr * g
+                    counter += 1
+                else:
+                    temp_weight = p
+                fast_weights.append(temp_weight)
 
         for params_old, params_new in zip(self.net.parameters(), fast_weights):
             params_new.learn = params_old.learn
+
+
 
         # this is the loss and accuracy before first update
         with torch.no_grad():
@@ -909,20 +952,29 @@ class MetaRL2(nn.Module):
 
             fast_weights_new = []
             counter = 0
-            for g, p in zip(grad, fast_weights):
+            for p in fast_weights:
                 if p.learn:
-                    mask = self.net.meta_vars[counter]
+                    g = grad[counter]
+                    mask = self.net.meta_plasticity[counter]
+                    if self.plasticity:
+                        if self.sigmoid:
+                            temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
+                        else:
+                            temp_weight = p - self.update_lr * g * mask
 
-                    temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
+                    else:
+                        temp_weight = p - self.update_lr * g
 
                     counter += 1
                 else:
                     temp_weight = p
                 fast_weights_new.append(temp_weight)
             fast_weights = fast_weights_new
-
-            for params_old, params_new in zip(self.net.parameters(), fast_weights):
+            #
+            for params_old, params_new in zip(self.other_params, fast_weights):
                 params_new.learn = params_old.learn
+
+
 
         logits_q = self.net(x_rand[0], fast_weights, bn_training=False)
         logits_q = torch.gather(logits_q, 1, a_rand[0].unsqueeze(-1)).squeeze(-1)

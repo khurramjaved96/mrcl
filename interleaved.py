@@ -1,9 +1,7 @@
-import copy
 import logging
 
 import numpy as np
 import torch
-from torch import optim
 from torch.nn import functional as F
 from torch.utils.tensorboard import SummaryWriter
 
@@ -69,7 +67,7 @@ def main():
 
     print("Selected args", args)
 
-    tasks = list(range(400))
+    tasks = list(range(2000))
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args["capacity"] + 1)
 
@@ -88,12 +86,77 @@ def main():
     logger.info('Total trainable tensors: %d', num)
 
     accuracy = 0
-
+    adaptation_accuracy = 0
     for step in range(args["epoch"]):
-    #
+        if step % 5 == 0:
+            logger.warning("####\t STEP %d \t####", step)
+
+        lrs = args["update_lr"]
         if step == 0:
             for name, param in metalearner.named_parameters():
                 logger.info("Name = %s, learn = %s", name, str(param.learn))
+
+        t1 = np.random.choice(tasks, args["tasks"], replace=False)
+
+        iterators = []
+        for t in t1:
+            iterators.append(sampler.sample_task([t]))
+
+        x_traj, y_traj, x_rand, y_rand = construct_set(iterators, sampler, steps=args["update_step"])
+
+        if torch.cuda.is_available():
+            x_traj, y_traj, x_rand, y_rand = x_traj.cuda(), y_traj.cuda(), x_rand.cuda(), y_rand.cuda()
+        net = metalearner.net
+        for k in range(len(x_traj)):
+
+            logits = net(x_traj[k], vars=None, bn_training=False)
+            logits_select = []
+            for no, val in enumerate(y_traj[k, :, 1].long()):
+                logits_select.append(logits[no, val])
+            logits = torch.stack(logits_select).unsqueeze(1)
+            loss = F.mse_loss(logits, y_traj[k, :, 0].unsqueeze(1))
+            # if k < 10:
+
+            grad = metalearner.clip_grad(
+                torch.autograd.grad(loss, list(filter(lambda x: x.learn, list(net.parameters())))))
+
+            counter = 0
+            for (name, p) in net.named_parameters():
+                if "meta" in name or "neuro" in name:
+                    pass
+                if p.learn:
+                    g = grad[counter]
+                    # print(g)
+                    mask = net.meta_plasticity[counter]
+                    # print(g.shape, p.shape, mask.shape)
+                    if metalearner.plasticity:
+                        if metalearner.sigmoid:
+                            p.data -= lrs * g * torch.sigmoid(mask)
+                        else:
+                            p.data -= lrs * g * mask
+                    else:
+                        p.data -= lrs * g
+                    counter += 1
+                else:
+                    pass
+
+        with torch.no_grad():
+            logits = net(x_rand[0], vars=None, bn_training=False)
+            # print("Logits = ", logits)
+            logits_select = []
+            for no, val in enumerate(y_rand[0, :, 1].long()):
+                logits_select.append(logits[no, val])
+            logits = torch.stack(logits_select).unsqueeze(1)
+            # print("Logits = ", logits)
+            # print("Targets = ", y_rand[0, :, 0].unsqueeze(1))
+            loss_q = F.mse_loss(logits, y_rand[0, :, 0].unsqueeze(1))
+            adaptation_accuracy = adaptation_accuracy * 0.85 + loss_q.detach().item() * 0.15
+            # adaptation_accuracy /= (1-(0.85**(step+1)))
+            if step % 5 == 0:
+                logger.info("Running adaptation loss = %f", adaptation_accuracy)
+            # logger.info("Adaptation loss = %f", loss_q.item())
+            writer.add_scalar('/learn/train/accuracy', loss_q, step)
+            # lr_results[lrs].append(loss_q.item())
 
         t1 = np.random.choice(tasks, args["tasks"], replace=False)
 
@@ -118,83 +181,16 @@ def main():
             for param_group in metalearner.optimizer.param_groups:
                 logger.info("Learning Rate at step %d = %s", step, str(param_group['lr']))
 
-        accuracy = accuracy * 0.95 + 0.05 * accs[-1]
+        accuracy = accuracy * 0.85 + 0.15 * accs[-1]
+        # accuracy /= (1-(0.85**(step+1)))
+        writer.add_scalar('/metatrain/train/accuracy', accs[-1], step)
+        writer.add_scalar('/metatrain/train/runningaccuracy', accuracy, step)
+
         if step % 5 == 0:
-            writer.add_scalar('/metatrain/train/accuracy', accs[-1], step)
-            writer.add_scalar('/metatrain/train/runningaccuracy', accuracy, step)
-            logger.info("Running accuracy = %f", accuracy.item())
-            logger.debug('Step: %d \t Meta-training loss: First: %f \t Last: %f', step, accs[0].item() , accs[-1].item())
-
-        if step % 100 == 0:
-            counter = 0
-            for name, _ in metalearner.net.named_parameters():
-                counter += 1
-
-            for lrs in [args["update_lr"]]:
-                lr_results = {}
-                lr_results[lrs] = []
-                for temp in range(0, 10):
-                    t1 = np.random.choice(tasks, args["tasks"], replace=False)
-                    iterators = []
-
-                    for t in t1:
-                        iterators.append(sampler.sample_task([t]))
-                    x_traj, y_traj, x_rand, y_rand = construct_set(iterators, sampler, steps=args["update_step"])
-                    if torch.cuda.is_available():
-                        x_traj, y_traj, x_rand, y_rand = x_traj.cuda(), y_traj.cuda(), x_rand.cuda(), y_rand.cuda()
-
-                    net = copy.deepcopy(metalearner.net)
-
-                    for params_old, params_new in zip(metalearner.net.parameters(), net.parameters()):
-                        params_new.learn = params_old.learn
-
-                    for (name, p) in net.named_parameters():
-                        if "meta" in name or "neuro" in name:
-                            p.learn = False
-
-                    for k in range(len(x_traj)):
-
-                        logits = net(x_traj[k], vars=None, bn_training=False)
-                        logits_select = []
-                        for no, val in enumerate(y_traj[k, :, 1].long()):
-                            logits_select.append(logits[no, val])
-                        logits = torch.stack(logits_select).unsqueeze(1)
-                        loss = F.mse_loss(logits, y_traj[k, :, 0].unsqueeze(1))
-                        # if k < 10:
-                        grad = metalearner.clip_grad(torch.autograd.grad(loss, net.parameters()))
-
-                        fast_weights = []
-                        counter = 0
-
-                        for g, (name, p) in zip(grad, net.named_parameters()):
-                            if p.learn:
-                                mask = net.meta_plasticity[counter]
-                                if not args["no_plasticity"]:
-                                    temp_weight = p - lrs * g
-                                else:
-                                    if args["no_sigmoid"]:
-                                        temp_weight = p - lrs * g * mask
-                                    else:
-                                        temp_weight = p - lrs * g * torch.sigmoid(mask)
-                                counter += 1
-                                p.data = temp_weight.data
-                            else:
-                                temp_weight = p
-                            fast_weights.append(temp_weight)
-                    #
-                    with torch.no_grad():
-                        logits = net(x_rand[0], vars=None, bn_training=False)
-                        logits_select = []
-                        for no, val in enumerate(y_rand[0, :, 1].long()):
-                            logits_select.append(logits[no, val])
-                        logits = torch.stack(logits_select).unsqueeze(1)
-                        loss_q = F.mse_loss(logits, y_rand[0, :, 0].unsqueeze(1))
-                        logger.debug("Loss = %f", loss_q.item())
-                        lr_results[lrs].append(loss_q.item())
-
-                logger.warning("Avg MSE LOSS for lr %s = %s", str(lrs), str(np.mean(lr_results[lrs])))
-                writer.add_scalar('/metatest/test/averageaccuracy', np.mean(lr_results[lrs]), step)
-
+            logger.info("Running meta-loss = %f", accuracy.item())
+        if step % 20 == 0:
+            logger.debug('Meta-training loss: Before adaptation: %f \t After adaptation: %f', accs[0].item(),
+                         accs[-1].item())
 
         if step % 100 == 0:
             torch.save(metalearner.net, my_experiment.path + "net.model")
@@ -203,7 +199,6 @@ def main():
                 dict_names[name] = param.learn
             my_experiment.add_result("Layers meta values", dict_names)
             my_experiment.store_json()
-
 
 
 #
