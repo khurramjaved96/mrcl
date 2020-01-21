@@ -37,24 +37,24 @@ class Learner(nn.Module):
         self.vars_bn = nn.ParameterList()
         # self.meta_vars_bn = nn.ParameterList()
         store_meta = False
-        for i, (name, learn, param) in enumerate(self.config):
+        for i, (name, adaptation, meta_param, param) in enumerate(self.config):
             # print("Name = ", name)
             if name is 'conv2d':
                 # [ch_out, ch_in, kernelsz, kernelsz]
                 w = nn.Parameter(torch.ones(*param[:4]))
                 # gain=1 according to cbfin's implementation
                 torch.nn.init.kaiming_normal_(w)
-                w.learn = learn
+                w.learn = adaptation
                 self.vars.append(w)
                 # [ch_out]
                 b = nn.Parameter(torch.zeros(param[0]))
-                b.learn = learn
+                b.learn = adaptation
                 self.vars.append(b)
 
             elif name is 'convt2d':
                 # [ch_in, ch_out, kernelsz, kernelsz, stride, padding]
                 w = nn.Parameter(torch.ones(*param[:4]))
-                w.learn = learn
+                w.learn = adaptation
                 # gain=1 according to cbfin's implementation
 
                 torch.nn.init.kaiming_normal_(w)
@@ -66,10 +66,12 @@ class Learner(nn.Module):
 
                 # [ch_out, ch_in]
                 w = nn.Parameter(torch.ones(*param))
-                w.learn = learn
+                w.learn = adaptation
+                w.meta = meta_param
                 torch.nn.init.kaiming_normal_(w)
                 b = nn.Parameter(torch.zeros(param[0]))
-                b.learn = learn
+                b.learn = adaptation
+                b.meta = meta_param
 
                 self.vars.append(w)
                 self.vars.append(b)
@@ -79,11 +81,13 @@ class Learner(nn.Module):
                 torch.nn.init.kaiming_normal_(w_mod)
                 b_mod = nn.Parameter(torch.zeros(param[0]))
                 b_mod.learn = False
+                w_mod.meta = True
+                b_mod.meta = True
 
                 self.neuromodulation.append(w_mod)
                 self.neuromodulation.append(b_mod)
 
-                if learn:
+                if adaptation:
                     w = nn.Parameter(torch.zeros(*param))
                     # torch.nn.init.zeros_(w)
                     # torch.nn.init.normal_(w)
@@ -95,6 +99,8 @@ class Learner(nn.Module):
                     self.meta_plasticity.append(b)
                     w.learn = False
                     b.learn = False
+                    w.meta = True
+                    b.meta = True
 
             #
 
@@ -112,11 +118,11 @@ class Learner(nn.Module):
             elif name is 'bn':
                 # [ch_out]
                 w = nn.Parameter(torch.ones(param[0]))
-                w.learn = learn
+                w.learn = adaptation
                 self.vars.append(w)
                 # [ch_out]
                 b = nn.Parameter(torch.zeros(param[0]))
-                b.learn = learn
+                b.learn = adaptation
                 self.vars.append(b)
 
                 # must set requires_grad=False
@@ -267,7 +273,7 @@ class Learner(nn.Module):
         idx = 0
         bn_idx = 0
 
-        for name, meta, param in self.config:
+        for name, meta, meta_param, param in self.config:
 
             if name == 'conv2d':
                 w, b = vars[idx], vars[idx + 1]
