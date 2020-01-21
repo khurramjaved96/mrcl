@@ -94,93 +94,124 @@ class ModelFactory():
                 hidden_size = width
                 return [
 
-                    ('linear', False, [hidden_size, in_channels]),
+                    ('linear', False, True,  [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
-                    ('relu', False, [True]),
-                    ('linear', False, [hidden_size, hidden_size]),
+                    ('relu', False, True, [True]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', False, [True]),
+                    ('relu', False, True, [True]),
                     # ('rep', []),
-                    ('linear', False, [hidden_size, hidden_size]),
+                    ('linear', False, True,[hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', False, [True]),
-                    ('linear', False, [hidden_size, hidden_size]),
+                    ('relu', False,True,  [True]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', False, [True]),
-                    ('linear', False, [hidden_size, hidden_size]),
+                    ('relu', False, True, [True]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', False, [True]),
-                    ('linear', False, [hidden_size, hidden_size]),
+                    ('relu', False, True, [True]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', False, [True]),
+                    ('relu', False, True, [True]),
 
-                    ('linear', True, [hidden_size, hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [num_actions, hidden_size])
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    ('relu', True, False, [True]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    ('relu', True, False, [True]),
+                    ('linear', True, False, [num_actions, hidden_size])
                 ]
 
             if model_type == "maml-warped":
                 hidden_size = width
                 return [
 
-                    ('linear', False, [hidden_size, in_channels]),
+                    ('linear', False, True, [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
+                    ('relu', True, True, [True]),
                     # ('rep', []),
-                    ('linear', False, [hidden_size, hidden_size]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', False, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
+                    ('relu', True, True, [True]),
 
-                    ('linear', False, [hidden_size, hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [num_actions, hidden_size])
+                    ('linear', False,True,  [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [num_actions, hidden_size])
                 ]
 
             if model_type == "maml":
                 hidden_size = width
                 return [
 
-                    ('linear', True, [hidden_size, in_channels]),
+                    ('linear', True, True,  [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
+                    ('relu', True, True, [True]),
                     # ('rep', []),
-                    ('linear', True, [hidden_size, hidden_size]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', True, [True]),
+                    ('relu', True, True, [True]),
 
-                    ('linear', True, [hidden_size, hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [hidden_size, hidden_size]),
-                    ('relu', True, [True]),
-                    ('linear', True, [num_actions, hidden_size])
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [num_actions, hidden_size])
+                ]
+
+            if model_type == "plasticity":
+                hidden_size = width
+                return [
+
+                    ('linear', True, False,  [hidden_size, in_channels]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    # ('rep', []),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, False, [num_actions, hidden_size])
                 ]
 
         elif dataset == "atari":
