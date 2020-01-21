@@ -85,8 +85,11 @@ def main():
     num = sum(map(lambda x: np.prod(x.shape), tmp))
     logger.info('Total trainable tensors: %d', num)
 
-    accuracy = 0
-    adaptation_accuracy = 0
+    loss = 0
+    adaptation_loss = 0
+    loss_history = []
+    adaptation_loss_history = []
+
     for step in range(args["epoch"]):
         if step % 5 == 0:
             logger.warning("####\t STEP %d \t####", step)
@@ -149,13 +152,14 @@ def main():
             logits = torch.stack(logits_select).unsqueeze(1)
             # print("Logits = ", logits)
             # print("Targets = ", y_rand[0, :, 0].unsqueeze(1))
-            loss_q = F.mse_loss(logits, y_rand[0, :, 0].unsqueeze(1))
-            adaptation_accuracy = adaptation_accuracy * 0.85 + loss_q.detach().item() * 0.15
-            # adaptation_accuracy /= (1-(0.85**(step+1)))
+            current_adaptation_loss = F.mse_loss(logits, y_rand[0, :, 0].unsqueeze(1))
+            adaptation_loss_history.append(current_adaptation_loss.detach().item())
+            adaptation_loss = adaptation_loss * 0.85 + current_adaptation_loss.detach().cpu().item() * 0.15
+            # adaptation_loss /= (1-(0.85**(step+1)))
             if step % 5 == 0:
-                logger.info("Running adaptation loss = %f", adaptation_accuracy)
+                logger.info("Running adaptation loss = %f", adaptation_loss)
             # logger.info("Adaptation loss = %f", loss_q.item())
-            writer.add_scalar('/learn/train/accuracy', loss_q, step)
+            writer.add_scalar('/learn/train/accuracy', current_adaptation_loss, step)
             # lr_results[lrs].append(loss_q.item())
 
         t1 = np.random.choice(tasks, args["tasks"], replace=False)
@@ -169,28 +173,25 @@ def main():
         if torch.cuda.is_available():
             x_traj, y_traj, x_rand, y_rand = x_traj.cuda(), y_traj.cuda(), x_rand.cuda(), y_rand.cuda()
 
-        accs = metalearner(x_traj, y_traj, x_rand, y_rand)
-
-        metalearner.meta_optim.step()
+        meta_loss = metalearner(x_traj, y_traj, x_rand, y_rand)
+        loss_history.append(meta_loss[-1].detach().cpu().item())
+        if metalearner.meta_optim is not None:
+            metalearner.meta_optim.step()
         if not args["no_plasticity"]:
             metalearner.meta_optim_plastic.step()
         # if not args["no_neuro"]:
         #     metalearner.meta
 
-        if step in [0, 2000, 3000, 4000]:
-            for param_group in metalearner.optimizer.param_groups:
-                logger.info("Learning Rate at step %d = %s", step, str(param_group['lr']))
-
-        accuracy = accuracy * 0.85 + 0.15 * accs[-1]
-        # accuracy /= (1-(0.85**(step+1)))
-        writer.add_scalar('/metatrain/train/accuracy', accs[-1], step)
-        writer.add_scalar('/metatrain/train/runningaccuracy', accuracy, step)
+        loss = loss * 0.85 + 0.15 * meta_loss[-1]
+        # loss /= (1-(0.85**(step+1)))
+        writer.add_scalar('/metatrain/train/accuracy', meta_loss[-1], step)
+        writer.add_scalar('/metatrain/train/runningaccuracy', loss, step)
 
         if step % 5 == 0:
-            logger.info("Running meta-loss = %f", accuracy.item())
+            logger.info("Running meta-loss = %f", loss.item())
         if step % 20 == 0:
-            logger.debug('Meta-training loss: Before adaptation: %f \t After adaptation: %f', accs[0].item(),
-                         accs[-1].item())
+            logger.debug('Meta-training loss: Before adaptation: %f \t After adaptation: %f', meta_loss[0].item(),
+                         meta_loss[-1].item())
 
         if step % 100 == 0:
             torch.save(metalearner.net, my_experiment.path + "net.model")
@@ -198,10 +199,12 @@ def main():
             for (name, param) in metalearner.net.named_parameters():
                 dict_names[name] = param.learn
             my_experiment.add_result("Layers meta values", dict_names)
+            my_experiment.add_result("Meta loss", loss_history)
+            my_experiment.add_result("Adaptation loss", loss_history)
             my_experiment.store_json()
 
 
-#
 
 if __name__ == '__main__':
     main()
+#
