@@ -55,14 +55,27 @@ class MetaLearnerRegression(nn.Module):
             elif "neuro" in name:
                 neuro_weights.append(param)
             else:
-                # if  param.learn:
-                #     print("Weight in meta-optimizer = ", name)
-                other_weights.append(param)
+                if param.meta:
+                    other_weights.append(param)
+
+
+        for name, param in self.net.named_parameters():
+            if param.meta:
+                logger.info("Weight in meta-optimizer = %s", name)
+            if param.learn:
+                logger.debug("Weight for adaptation = %s", name)
+
         self.other_params = other_weights
-        self.optimizer = optim.Adam(other_weights, lr=self.meta_lr)
+        self.meta_optim = None
+        if len(self.other_params) > 0:
+            self.optimizer = optim.Adam(other_weights, lr=self.meta_lr)
+            self.meta_optim = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, [800, 2000, 3000], 0.3)
+        else:
+            logger.warning("Zero meta parameters in the forward pass")
+
         self.optimizer_plastic = optim.Adam(plastic_weights, lr=args["plasticity_lr"])
         self.optimizer_neuromodulation = optim.Adam(neuro_weights, lr=args["modulation_lr"])
-        self.meta_optim = torch.optim.lr_scheduler.MultiStepLR(self.optimizer, [800, 2000, 3000], 0.3)
+
         self.meta_optim_plastic = torch.optim.lr_scheduler.MultiStepLR(self.optimizer_plastic, [800, 2000, 3000], 0.3)
 
     #
@@ -170,7 +183,7 @@ class MetaLearnerRegression(nn.Module):
                 fast_weights_new.append(temp_weight)
             fast_weights = fast_weights_new
             #
-            for params_old, params_new in zip(self.other_params, fast_weights):
+            for params_old, params_new in zip(self.net.parameters(), fast_weights):
                 params_new.learn = params_old.learn
 
         logits_q = self.net(x_rand[0, 0:int((k + 1) * len(x_rand[0]) / len(x_traj)), :], fast_weights,
@@ -184,7 +197,8 @@ class MetaLearnerRegression(nn.Module):
 
         losses_q[k + 1] += loss_q
 
-        self.optimizer.zero_grad()
+        if len(self.other_params) > 0:
+            self.optimizer.zero_grad()
         if self.plasticity:
             self.optimizer_plastic.zero_grad()
         if self.neuro:
@@ -192,8 +206,8 @@ class MetaLearnerRegression(nn.Module):
         # self.optimizer_plasticity.zero_grad()
         loss_q = losses_q[k + 1]
         loss_q.backward()
-
-        self.optimizer.step()
+        if len(self.other_params) > 0:
+            self.optimizer.step()
         if self.plasticity:
             self.optimizer_plastic.step()
         if self.neuro:
