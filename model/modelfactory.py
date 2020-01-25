@@ -121,11 +121,42 @@ class ModelFactory():
                     ('linear', True, False, [num_actions, hidden_size])
                 ]
 
+            if model_type == "mrcl-all":
+                hidden_size = width
+                return [
+
+                    ('linear', False, True,  [hidden_size, in_channels]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, True, [True]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, True, [True]),
+                    # ('rep', []),
+                    ('linear', False, True,[hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False,True,  [True]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, True, [True]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, True, [True]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', False, True, [True]),
+
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, False, [True]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, False, [True]),
+                    ('linear', True, True, [num_actions, hidden_size])
+                ]
+
             if model_type == "maml-warped":
                 hidden_size = width
                 return [
 
-                    ('linear', False, True, [hidden_size, in_channels]),
+                    ('linear', True, True, [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
                     ('linear', True, True, [hidden_size, hidden_size]),
@@ -149,9 +180,10 @@ class ModelFactory():
                     ('relu', True, True, [True]),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     ('relu', True, True, [True]),
-                    ('linear', True, True, [num_actions, hidden_size])
-                ]
+                    ('linear', False, True, [num_actions, hidden_size]),
 
+                ]
+            #
             if model_type == "maml":
                 hidden_size = width
                 return [
@@ -182,6 +214,8 @@ class ModelFactory():
                     ('relu', True, True, [True]),
                     ('linear', True, True, [num_actions, hidden_size])
                 ]
+
+
 
             if model_type == "plasticity":
                 hidden_size = width

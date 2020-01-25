@@ -1,20 +1,16 @@
-import argparse
 import logging
 
 import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from configs.default import default_argparse
 
 import datasets.datasetfactory as df
-from torch import optim
 import datasets.task_sampler as ts
 import model.modelfactory as mf
 import utils.utils as utils
+from configs.default import default_argparse
 from experiment.experiment import experiment
 from model.meta_learner import MetaLearingClassification
-
-import torch.nn.init as init
 
 logger = logging.getLogger('experiment')
 
@@ -105,7 +101,5 @@ def main():
 
 #
 if __name__ == '__main__':
-
-
     main()
 #

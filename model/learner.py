@@ -11,6 +11,8 @@ from torch.nn import functional as F
 logger = logging.getLogger("experiment")
 
 
+#
+
 class Learner(nn.Module):
     """
 
@@ -37,8 +39,11 @@ class Learner(nn.Module):
         self.vars_bn = nn.ParameterList()
         # self.meta_vars_bn = nn.ParameterList()
         store_meta = False
+
         for i, (name, adaptation, meta_param, param) in enumerate(self.config):
             # print("Name = ", name)
+            if i == 0:
+                input_param = param
             if name is 'conv2d':
                 # [ch_out, ch_in, kernelsz, kernelsz]
                 w = nn.Parameter(torch.ones(*param[:4]))
@@ -137,61 +142,6 @@ class Learner(nn.Module):
             else:
                 raise NotImplementedError
 
-        # for i, (name, param) in enumerate(self.config):
-        #     if name is 'conv2d':
-        #         # [ch_out, ch_in, kernelsz, kernelsz]
-        #         w = nn.Parameter(torch.ones(*param[:4]))
-        #         # gain=1 according to cbfin's implementation
-        #         torch.nn.init.kaiming_normal_(w)
-        #         self.meta_vars.append(w)
-        #         # [ch_out]
-        #         self.meta_vars.append(nn.Parameter(torch.zeros(param[0])))
-        #
-        #     elif name is 'convt2d':
-        #         # [ch_in, ch_out, kernelsz, kernelsz, stride, padding]
-        #         w = nn.Parameter(torch.ones(*param[:4]))
-        #         # gain=1 according to cbfin's implementation
-        #         torch.nn.init.kaiming_normal_(w)
-        #         self.meta_vars.append(w)
-        #         # [ch_in, ch_out]
-        #         self.meta_vars.append(nn.Parameter(torch.zeros(param[1])))
-        #
-        #     elif name is 'linear':
-        #
-        #         # [ch_out, ch_in]
-        #         w = nn.Parameter(torch.ones(*param))
-        #         # gain=1 according to cbfinn's implementation
-        #         torch.nn.init.kaiming_normal_(w)
-        #         self.meta_vars.append(w)
-        #         # [ch_out]
-        #         self.meta_vars.append(nn.Parameter(torch.zeros(param[0])))
-        #
-        #     elif name is 'cat':
-        #         pass
-        #     elif name is 'gate':
-        #         pass
-        #     elif name is 'cat_start':
-        #         pass
-        #     elif name is "rep":
-        #         pass
-        #     elif name is 'bn':
-        #         # [ch_out]
-        #         w = nn.Parameter(torch.ones(param[0]))
-        #         self.meta_vars.append(w)
-        #         # [ch_out]
-        #         self.meta_vars.append(nn.Parameter(torch.zeros(param[0])))
-        #
-        #         # must set requires_grad=False
-        #         running_mean = nn.Parameter(torch.zeros(param[0]), requires_grad=False)
-        #         running_var = nn.Parameter(torch.ones(param[0]), requires_grad=False)
-        #         self.meta_vars_bn.extend([running_mean, running_var])
-        #
-        #
-        #     elif name in ['tanh', 'relu', 'upsample', 'avg_pool2d', 'max_pool2d',
-        #                   'flatten', 'reshape', 'leakyrelu', 'sigmoid']:
-        #         continue
-        #     else:
-        #         raise NotImplementedError
 
     def decay_plasticity(self, decay_rate):
         for param in self.meta_plasticity:
@@ -252,6 +202,94 @@ class Learner(nn.Module):
 
         return info
 
+    def forward_plasticity(self, x):
+
+        x = x.float()
+
+        vars = self.neuromodulation
+
+        idx = 0
+        bn_idx = 0
+        list_of_activations = []
+        for name, meta, meta_param, param in self.config:
+
+            if name == 'conv2d':
+                w, b = vars[idx], vars[idx + 1]
+                x = F.conv2d(x, w, b, stride=param[4], padding=param[5])
+
+
+            elif name == 'convt2d':
+                w, b = vars[idx], vars[idx + 1]
+                x = F.conv_transpose2d(x, w, b, stride=param[4], padding=param[5])
+
+                idx += 2
+
+            elif name == 'linear':
+
+                w, b = vars[idx], vars[idx + 1]
+                x = F.linear(x, w, b)
+
+                idx += 2
+            #
+            elif name == 'rep':
+                pass
+
+
+            elif name == 'flatten':
+
+                x = x.view(x.size(0), -1)
+
+
+            elif name == 'reshape':
+
+                x = x.view(x.size(0), *param)
+
+
+            elif name == 'relu':
+                x = F.relu(x, inplace=param[0])
+                list_of_activations.append(torch.mean(x, dim=0))
+
+            elif name == "modulate":
+                pass
+
+
+            elif name == 'leakyrelu':
+                x = F.leaky_relu(x, negative_slope=param[0], inplace=param[1])
+
+            elif name == 'tanh':
+                x = F.tanh(x)
+            elif name == 'sigmoid':
+                x = torch.sigmoid(x)
+            elif name == 'upsample':
+                x = F.upsample_nearest(x, scale_factor=param[0])
+
+            elif name == 'max_pool2d':
+                x = F.max_pool2d(x, param[0], param[1], param[2])
+
+            elif name == 'avg_pool2d':
+                x = F.avg_pool2d(x, param[0], param[1], param[2])
+
+            elif name == 'bn':
+                w, b = vars[idx], vars[idx + 1]
+                # print("BN weifght = ", w)
+                # print("BN bias = ", b)
+                running_mean, running_var = self.vars_bn[bn_idx], self.vars_bn[bn_idx + 1]
+                x = F.batch_norm(x, running_mean, running_var, weight=w, bias=b, training=False)
+                idx += 2
+                bn_idx += 2
+
+            else:
+                raise NotImplementedError
+
+        # make sure variable is used properly
+        list_of_activations.append(torch.mean(x, dim=0))
+        assert idx == len(vars)
+        assert bn_idx == len(self.vars_bn)
+
+        return list_of_activations
+
+
+
     def forward(self, x, vars=None, bn_training=True, feature=False):
         """
         This function can be called by finetunning, however, in finetunning, we dont wish to update
@@ -272,7 +310,8 @@ class Learner(nn.Module):
         x_meta = x
         idx = 0
         bn_idx = 0
-
+        #
+        assert(not self.modulate)
         for name, meta, meta_param, param in self.config:
 
             if name == 'conv2d':

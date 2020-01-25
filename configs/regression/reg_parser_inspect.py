@@ -17,7 +17,7 @@ class Parser(configargparse.ArgParser):
         self.add('--update_lr', nargs='+', type=float, help='task-level inner update learning rate',
                  default=[0.003, 0.001])
         self.add('--update_step', type=int, help='task-level inner update steps', default=10)
-        self.add('--name', help='Name of experiment', default="oml_regression")
+        self.add('--name', help='Name of experiment', default="inspect")
         self.add('--model', help='Name of model', default="maml")
         self.add('--model-path', help='Path to model', default=None)
         self.add("--second-order", action="store_true")

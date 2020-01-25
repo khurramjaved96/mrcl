@@ -3,7 +3,6 @@ import logging
 
 import numpy as np
 import torch
-from torch import optim
 from torch.nn import functional as F
 from torch.utils.tensorboard import SummaryWriter
 
@@ -15,7 +14,7 @@ from model.meta_learner import MetaLearnerRegression
 from utils import utils
 
 logger = logging.getLogger('experiment')
-
+#
 
 def construct_set(iterators, sampler, steps):
     x_traj = []
@@ -90,7 +89,7 @@ def main():
     accuracy = 0
 
     for step in range(args["epoch"]):
-    #
+        #
         if step == 0:
             for name, param in metalearner.named_parameters():
                 logger.info("Name = %s, learn = %s", name, str(param.learn))
@@ -108,11 +107,6 @@ def main():
 
         accs = metalearner(x_traj, y_traj, x_rand, y_rand)
 
-        metalearner.meta_optim.step()
-        if not args["no_plasticity"]:
-            metalearner.meta_optim_plastic.step()
-        # if not args["no_neuro"]:
-        #     metalearner.meta
 
         if step in [0, 2000, 3000, 4000]:
             for param_group in metalearner.optimizer.param_groups:
@@ -123,7 +117,7 @@ def main():
             writer.add_scalar('/metatrain/train/accuracy', accs[-1], step)
             writer.add_scalar('/metatrain/train/runningaccuracy', accuracy, step)
             logger.info("Running accuracy = %f", accuracy.item())
-            logger.debug('Step: %d \t Meta-training loss: First: %f \t Last: %f', step, accs[0].item() , accs[-1].item())
+            logger.debug('Step: %d \t Meta-training loss: First: %f \t Last: %f', step, accs[0].item(), accs[-1].item())
 
         if step % 100 == 0:
             counter = 0
@@ -195,7 +189,6 @@ def main():
                 logger.warning("Avg MSE LOSS for lr %s = %s", str(lrs), str(np.mean(lr_results[lrs])))
                 writer.add_scalar('/metatest/test/averageaccuracy', np.mean(lr_results[lrs]), step)
 
-
         if step % 100 == 0:
             torch.save(metalearner.net, my_experiment.path + "net.model")
             dict_names = {}
@@ -203,7 +196,6 @@ def main():
                 dict_names[name] = param.learn
             my_experiment.add_result("Layers meta values", dict_names)
             my_experiment.store_json()
-
 
 
 #

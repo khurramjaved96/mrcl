@@ -38,6 +38,7 @@ def main():
     print("Selected args", args)
 
     tasks = list(range(2000))
+    tasks = list(range(20))
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args["capacity"] + 1)
 
@@ -57,7 +58,7 @@ def main():
     tmp = filter(lambda x: x.requires_grad, metalearner.parameters())
     num = sum(map(lambda x: np.prod(x.shape), tmp))
     logger.info('Total trainable tensors: %d', num)
-
+    #
     running_meta_loss = 0
     adaptation_loss = 0
     loss_history = []
@@ -69,6 +70,7 @@ def main():
         logger.info("Name = %s, learn = %s", name, str(param.learn))
 
     for step in range(args["epoch"]):
+        logger.warning("ONLY 20 FUNCTIONS")
         if step % LOG_INTERVAL == 0:
             logger.warning("####\t STEP %d \t####", step)
 
@@ -99,15 +101,24 @@ def main():
 
             grad = metalearner.clip_grad(
                 torch.autograd.grad(loss_temp, list(filter(lambda x: x.learn, list(net.parameters())))))
-
-            metalearner.inner_update(net, grad, adaptation_lr)
+            if args["context_plasticity"]:
+                list_of_contex = net.forward_plasticity(x_traj[k])
+            metalearner.inner_update(net, grad, adaptation_lr, list_of_contex)
 
             if not args["no_meta"]:
 
                 if meta_counter % args["frequency"] == 0:
                     if replay_buffer.len() > 0:
                         meta_steps_counter += 1
-                        x_traj_meta, y_traj_meta, x_rand_meta, y_rand_meta = replay_buffer.sample(1)[0]
+
+                        t1 = np.random.choice(tasks, args["tasks"], replace=False)
+
+                        iterators = []
+                        for t in t1:
+                            iterators.append(sampler.sample_task([t]))
+
+                        x_traj_meta, y_traj_meta, x_rand_meta, y_rand_meta = utils.construct_set(iterators, sampler,
+                                                                             steps=args["update_step"])
 
                         if torch.cuda.is_available():
                             x_traj_meta, y_traj_meta, x_rand_meta, y_rand_meta = x_traj_meta.to(device), y_traj_meta.to(

@@ -5,3 +5,6 @@ utils/__pycache__
 datasets/__pycache__
 model/__pycache__
 experiment/__pycache__
+configs/atari/__pycache__
+configs/regression/__pycache__
+trainer/__pycache__

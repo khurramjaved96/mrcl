@@ -11,36 +11,13 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-transition = namedtuple('transition', 'state, next_state, action, reward, is_terminal')
+transition = namedtuple('x_traj', 'state, next_state, action, reward, is_terminal')
 import torch
 
 def set_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
-
-class replay_buffer:
-    def __init__(self, buffer_size):
-        self.buffer_size = buffer_size
-        self.location = 0
-        self.buffer = []
-
-    def add(self, *args):
-        # Append when the buffer is not full but overwrite when the buffer is full
-        if len(self.buffer) < self.buffer_size:
-            self.buffer.append(transition(*args))
-        else:
-            self.buffer[self.location] = transition(*args)
-
-        # Increment the buffer location
-        self.location = (self.location + 1) % self.buffer_size
-
-    def sample(self, batch_size):
-        return random.sample(self.buffer, batch_size)
-
-    def sample_trajectory(self, batch_size):
-        initial_index = random.randint(0, len(self.buffer) - batch_size)
-        return self.buffer[initial_index: initial_index + batch_size]
 
 
 class ReservoirSampler:
@@ -130,12 +107,12 @@ class replay_buffer:
         self.location = 0
         self.buffer = []
 
-    def add(self, *args):
+    def add(self, args):
         # Append when the buffer is not full but overwrite when the buffer is full
         if len(self.buffer) < self.buffer_size:
-            self.buffer.append(transition(*args))
+            self.buffer.append(args)
         else:
-            self.buffer[self.location] = transition(*args)
+            self.buffer[self.location] = args
 
         # Increment the buffer location
         self.location = (self.location + 1) % self.buffer_size
@@ -146,6 +123,9 @@ class replay_buffer:
     def sample_trajectory(self, batch_size):
         initial_index = random.randint(0, len(self.buffer) - batch_size)
         return self.buffer[initial_index: initial_index + batch_size]
+
+    def len(self):
+        return len(self.buffer)
 
 
 class ReservoirSampler:
@@ -415,3 +395,34 @@ def show_images_grid(imgs_, num_images=25):
         else:
             ax.axis('off')
     plt.show()
+
+import torch
+
+def construct_set(iterators, sampler, steps):
+    x_traj = []
+    y_traj = []
+    list_of_ids = list(range(sampler.capacity - 1))
+
+    start_index = 0
+
+    for id, it1 in enumerate(iterators):
+        for inner in range(steps):
+            x, y = sampler.sample_batch(it1, list_of_ids[(id + start_index) % len(list_of_ids)], 32)
+            x_traj.append(x)
+            y_traj.append(y)
+    #
+
+    x_rand = []
+    y_rand = []
+    for id, it1 in enumerate(iterators):
+        x, y = sampler.sample_batch(it1, list_of_ids[(id + start_index) % len(list_of_ids)], 32)
+        x_rand.append(x)
+        y_rand.append(y)
+
+    x_rand = torch.stack([torch.cat(x_rand)])
+    y_rand = torch.stack([torch.cat(y_rand)])
+
+    x_traj = torch.stack(x_traj)
+    y_traj = torch.stack(y_traj)
+
+    return x_traj, y_traj, x_rand, y_rand
