@@ -32,6 +32,7 @@ class Learner(nn.Module):
         # this dict contains all tensors needed to be optimized
         self.vars = nn.ParameterList()
         self.meta_plasticity = nn.ParameterList()
+        self.context_models = nn.ParameterList()
         self.neuromodulation = nn.ParameterList()
         # self.meta_vars = nn.ParameterList()
         self.modulate = False
@@ -81,7 +82,7 @@ class Learner(nn.Module):
                 self.vars.append(w)
                 self.vars.append(b)
 
-                w_mod = nn.Parameter(torch.ones(*param))
+                w_mod = nn.Parameter(torch.ones(param[0], input_param[1]))
                 w_mod.learn = False
                 torch.nn.init.kaiming_normal_(w_mod)
                 b_mod = nn.Parameter(torch.zeros(param[0]))
@@ -91,6 +92,17 @@ class Learner(nn.Module):
 
                 self.neuromodulation.append(w_mod)
                 self.neuromodulation.append(b_mod)
+
+                w_context_plasticity = nn.Parameter(torch.ones(param[0], input_param[1]))
+                w_context_plasticity.learn = False
+                torch.nn.init.kaiming_normal_(w_context_plasticity)
+                b_context_plasticity = nn.Parameter(torch.zeros(param[0]))
+                b_context_plasticity.learn = False
+                w_context_plasticity.meta = True
+                b_context_plasticity.meta = True
+
+                self.context_models.append(w_context_plasticity)
+                self.context_models.append(b_context_plasticity)
 
                 if adaptation:
                     w = nn.Parameter(torch.zeros(*param))
@@ -202,11 +214,12 @@ class Learner(nn.Module):
 
         return info
 
+
     def forward_plasticity(self, x):
 
         x = x.float()
 
-        vars = self.neuromodulation
+        vars = self.context_models
 
         idx = 0
         bn_idx = 0
@@ -214,11 +227,13 @@ class Learner(nn.Module):
         for name, meta, meta_param, param in self.config:
 
             if name == 'conv2d':
+                assert(False)
                 w, b = vars[idx], vars[idx + 1]
                 x = F.conv2d(x, w, b, stride=param[4], padding=param[5])
 
 
             elif name == 'convt2d':
+                assert (False)
                 w, b = vars[idx], vars[idx + 1]
                 x = F.conv_transpose2d(x, w, b, stride=param[4], padding=param[5])
 
@@ -227,8 +242,8 @@ class Learner(nn.Module):
             elif name == 'linear':
 
                 w, b = vars[idx], vars[idx + 1]
-                x = F.linear(x, w, b)
-
+                gating = F.linear(x, w, b)
+                list_of_activations.append(torch.mean(F.relu(gating),0))
                 idx += 2
             #
             elif name == 'rep':
@@ -237,37 +252,36 @@ class Learner(nn.Module):
 
             elif name == 'flatten':
 
-                x = x.view(x.size(0), -1)
+                pass
 
 
             elif name == 'reshape':
 
-                x = x.view(x.size(0), *param)
+                pass
 
 
             elif name == 'relu':
-                x = F.relu(x, inplace=param[0])
-                list_of_activations.append(torch.mean(x, dim=0))
+                pass
 
             elif name == "modulate":
                 pass
 
 
             elif name == 'leakyrelu':
-                x = F.leaky_relu(x, negative_slope=param[0], inplace=param[1])
+                pass
 
             elif name == 'tanh':
-                x = F.tanh(x)
+                pass
             elif name == 'sigmoid':
-                x = torch.sigmoid(x)
+                pass
             elif name == 'upsample':
-                x = F.upsample_nearest(x, scale_factor=param[0])
+                pass
 
             elif name == 'max_pool2d':
-                x = F.max_pool2d(x, param[0], param[1], param[2])
+                pass
 
             elif name == 'avg_pool2d':
-                x = F.avg_pool2d(x, param[0], param[1], param[2])
+                pass
 
             elif name == 'bn':
                 w, b = vars[idx], vars[idx + 1]
@@ -282,7 +296,7 @@ class Learner(nn.Module):
                 raise NotImplementedError
 
         # make sure variable is used properly
-        list_of_activations.append(torch.mean(x, dim=0))
+        # list_of_activations.append(torch.mean(x, dim=0))
         assert idx == len(vars)
         assert bn_idx == len(self.vars_bn)
 
@@ -305,21 +319,19 @@ class Learner(nn.Module):
         if vars is None:
             vars = self.vars
 
-        meta_vars = self.neuromodulation
+        neuro_mod = self.neuromodulation
 
-        x_meta = x
+        x_input = x
         idx = 0
         bn_idx = 0
         #
-        assert(not self.modulate)
+
         for name, meta, meta_param, param in self.config:
 
             if name == 'conv2d':
                 w, b = vars[idx], vars[idx + 1]
                 x = F.conv2d(x, w, b, stride=param[4], padding=param[5])
-                if self.modulate:
-                    w_meta, b_meta = meta_vars[idx], meta_vars[idx + 1]
-                    x_meta = F.conv2d(x_meta, w_meta, b_meta, stride=param[4], padding=param[5])
+
 
                 idx += 2
 
@@ -329,9 +341,7 @@ class Learner(nn.Module):
                 w, b = vars[idx], vars[idx + 1]
                 x = F.conv_transpose2d(x, w, b, stride=param[4], padding=param[5])
 
-                if self.modulate:
-                    w_meta, b_meta = meta_vars[idx], meta_vars[idx + 1]
-                    x_meta = F.conv_transpose2d(x_meta, w_meta, b_meta, stride=param[4], padding=param[5])
+
 
                 idx += 2
 
@@ -339,9 +349,7 @@ class Learner(nn.Module):
 
                 w, b = vars[idx], vars[idx + 1]
                 x = F.linear(x, w, b)
-                if self.modulate:
-                    w_meta, b_meta = meta_vars[idx], meta_vars[idx + 1]
-                    x_meta = F.linear(x_meta, w_meta, b_meta)
+
 
                 idx += 2
             #
@@ -357,22 +365,21 @@ class Learner(nn.Module):
                 # print(x.shape)
 
                 x = x.view(x.size(0), -1)
-                if self.modulate:
-                    x_meta = x_meta.view(x_meta.size(0), -1)
+
 
             elif name == 'reshape':
                 # [b, 8] => [b, 2, 2, 2]
                 x = x.view(x.size(0), *param)
-                if self.modulate:
-                    x_meta = x_meta.view(x_meta.size(0), *param)
+
 
             elif name == 'relu':
                 x = F.relu(x, inplace=param[0])
-                if self.modulate:
-                    x_meta = F.relu(x_meta, inplace=param[0])
+
 
             elif name == "modulate":
-                x = x * x_meta
+                w, b = neuro_mod[idx-2], neuro_mod[idx - 1]
+                x_mod = F.relu(F.linear(x_input, w, b))
+                x = x * x_mod
 
 
             elif name == 'leakyrelu':
@@ -387,12 +394,10 @@ class Learner(nn.Module):
 
             elif name == 'max_pool2d':
                 x = F.max_pool2d(x, param[0], param[1], param[2])
-                if self.modulate:
-                    x_meta = F.max_pool2d(x_meta, param[0], param[1], param[2])
+
             elif name == 'avg_pool2d':
                 x = F.avg_pool2d(x, param[0], param[1], param[2])
-                if self.modulate:
-                    x_meta = F.avg_pool2d(x_meta, param[0], param[1], param[2])
+
 
             elif name == 'bn':
                 w, b = vars[idx], vars[idx + 1]

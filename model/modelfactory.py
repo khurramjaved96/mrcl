@@ -215,6 +215,44 @@ class ModelFactory():
                     ('linear', True, True, [num_actions, hidden_size])
                 ]
 
+            if model_type == "maml-mod":
+                hidden_size = width
+                return [
+
+                    ('linear', True, True,  [hidden_size, in_channels]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    # ('rep', []),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, True, [num_actions, hidden_size])
+                ]
+
 
 
             if model_type == "plasticity":
@@ -245,6 +283,44 @@ class ModelFactory():
                     ('relu', True, True, [True]),
                     ('linear', True, False, [hidden_size, hidden_size]),
                     ('relu', True, True, [True]),
+                    ('linear', True, False, [num_actions, hidden_size])
+                ]
+
+            if model_type == "plasticity-mod":
+                hidden_size = width
+                return [
+
+                    ('linear', True, False,  [hidden_size, in_channels]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    # ('rep', []),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    # ('bn', [hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('linear', True, False, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('modulate', True, False, [hidden_size, in_channels]),
                     ('linear', True, False, [num_actions, hidden_size])
                 ]
 

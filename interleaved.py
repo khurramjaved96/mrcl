@@ -97,10 +97,15 @@ def main():
             loss_temp = F.mse_loss(logits, y_traj[k, :, 0].unsqueeze(1))
             # if k < 10:
 
+
             grad = metalearner.clip_grad(
                 torch.autograd.grad(loss_temp, list(filter(lambda x: x.learn, list(net.parameters())))))
 
-            metalearner.inner_update(net, grad, adaptation_lr)
+            list_of_context = None
+            if metalearner.context:
+                list_of_context = metalearner.net.forward_plasticity(x_traj[k])
+
+            metalearner.inner_update(net, grad, adaptation_lr, list_of_context)
 
             if not args["no_meta"]:
 

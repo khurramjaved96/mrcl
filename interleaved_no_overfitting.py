@@ -38,7 +38,7 @@ def main():
     print("Selected args", args)
 
     tasks = list(range(2000))
-    tasks = list(range(20))
+    # tasks = list(range(20))
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args["capacity"] + 1)
 
@@ -70,7 +70,7 @@ def main():
         logger.info("Name = %s, learn = %s", name, str(param.learn))
 
     for step in range(args["epoch"]):
-        logger.warning("ONLY 20 FUNCTIONS")
+        # logger.warning("ONLY 20 FUNCTIONS")
         if step % LOG_INTERVAL == 0:
             logger.warning("####\t STEP %d \t####", step)
 
@@ -101,9 +101,12 @@ def main():
 
             grad = metalearner.clip_grad(
                 torch.autograd.grad(loss_temp, list(filter(lambda x: x.learn, list(net.parameters())))))
-            if args["context_plasticity"]:
-                list_of_contex = net.forward_plasticity(x_traj[k])
-            metalearner.inner_update(net, grad, adaptation_lr, list_of_contex)
+
+            list_of_context = None
+            if metalearner.context:
+                list_of_context = metalearner.net.forward_plasticity(x_traj[k])
+
+            metalearner.inner_update(net, grad, adaptation_lr, list_of_context)
 
             if not args["no_meta"]:
 
