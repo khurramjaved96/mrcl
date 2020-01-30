@@ -20,6 +20,14 @@ def set_seed(seed):
     np.random.seed(seed)
 
 
+def load_run(model_path):
+    import json
+    with open(model_path + "/metadata.json") as json_file:
+        data = json.load(json_file)
+    layers_learn = data["results"]["Layers meta values"]
+
+    return data['params'], layers_learn
+
 class ReservoirSampler:
     def __init__(self, windows, buffer_size=5000):
         self.buffer = []

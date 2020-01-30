@@ -29,6 +29,7 @@ class Parser(configargparse.ArgParser):
         self.add("--no-sigmoid", action="store_true")
         self.add("--neuro", action="store_true")
         self.add("--no-meta", action="store_true")
+        self.add("--sanity", action="store_true")
         self.add("--context-plasticity", action="store_true")
         self.add('--seed', nargs='+', help='Seed', default=[90], type=int)
         self.add('--frequency', nargs='+', help='Seed', default=[1], type=int)

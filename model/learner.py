@@ -27,7 +27,12 @@ class Learner(nn.Module):
         """
         super(Learner, self).__init__()
 
+        self.full_config = config
+
         self.config = config
+
+        self.plasticity_config = []
+        self.neuromodulation_config = []
 
         # this dict contains all tensors needed to be optimized
         self.vars = nn.ParameterList()
@@ -38,14 +43,44 @@ class Learner(nn.Module):
         self.modulate = False
         # running_mean and running_var
         self.vars_bn = nn.ParameterList()
+        self.plasticity_backbone = nn.ParameterList()
+        self.neuromodulation_backbone = nn.ParameterList()
+        self.context_backbone_width = 11
+        self.neuromodulation_backbone_width = 11
         # self.meta_vars_bn = nn.ParameterList()
         store_meta = False
 
         for i, (name, adaptation, meta_param, param) in enumerate(self.config):
-            # print("Name = ", name)
-            if i == 0:
-                input_param = param
-            if name is 'conv2d':
+
+
+            if "plasticity-bone" in name:
+                #     Do plasticity stuff
+                if name.split("-")[0] in "linear":
+                    w = nn.Parameter(torch.ones(*param))
+                    w.learn = adaptation
+                    w.meta = meta_param
+                    torch.nn.init.kaiming_normal_(w)
+                    b = nn.Parameter(torch.zeros(param[0]))
+                    b.learn = adaptation
+                    b.meta = meta_param
+                    self.plasticity_backbone.append(w)
+                    self.plasticity_backbone.append(b)
+                    self.context_backbone_width = param[0]
+
+            elif "neuromodulation-bone" in name:
+                if name.split("-")[0] in "linear":
+                    w = nn.Parameter(torch.ones(*param))
+                    w.learn = adaptation
+                    w.meta = meta_param
+                    torch.nn.init.kaiming_normal_(w)
+                    b = nn.Parameter(torch.zeros(param[0]))
+                    b.learn = adaptation
+                    b.meta = meta_param
+                    self.neuromodulation_backbone.append(w)
+                    self.neuromodulation_backbone.append(b)
+                    self.neuromodulation_backbone_width = param[0]
+
+            elif name is 'conv2d':
                 # [ch_out, ch_in, kernelsz, kernelsz]
                 w = nn.Parameter(torch.ones(*param[:4]))
                 # gain=1 according to cbfin's implementation
@@ -82,7 +117,7 @@ class Learner(nn.Module):
                 self.vars.append(w)
                 self.vars.append(b)
 
-                w_mod = nn.Parameter(torch.ones(param[0], input_param[1]))
+                w_mod = nn.Parameter(torch.ones(param[0], self.neuromodulation_backbone_width))
                 w_mod.learn = False
                 torch.nn.init.kaiming_normal_(w_mod)
                 b_mod = nn.Parameter(torch.zeros(param[0]))
@@ -93,7 +128,7 @@ class Learner(nn.Module):
                 self.neuromodulation.append(w_mod)
                 self.neuromodulation.append(b_mod)
 
-                w_context_plasticity = nn.Parameter(torch.ones(param[0], input_param[1]))
+                w_context_plasticity = nn.Parameter(torch.ones(param[0], self.context_backbone_width))
                 w_context_plasticity.learn = False
                 torch.nn.init.kaiming_normal_(w_context_plasticity)
                 b_context_plasticity = nn.Parameter(torch.zeros(param[0]))
@@ -106,13 +141,8 @@ class Learner(nn.Module):
 
                 if adaptation:
                     w = nn.Parameter(torch.zeros(*param))
-                    # torch.nn.init.zeros_(w)
-                    # torch.nn.init.normal_(w)
-                    # w = w*100
                     self.meta_plasticity.append(w)
                     b = nn.Parameter(torch.zeros(param[0]))
-                    # torch.nn.init.normal_(b)
-                    # b = b*100
                     self.meta_plasticity.append(b)
                     w.learn = False
                     b.learn = False
@@ -154,10 +184,18 @@ class Learner(nn.Module):
             else:
                 raise NotImplementedError
 
+        temp_config = []
+        for i, (name, adaptation, meta_param, param) in enumerate(self.config):
+            if "plasticity-bone" in name:
+                self.plasticity_config.append(self.config[i])
+            elif "neuromodulation-bone" in name:
+                self.neuromodulation_config.append(self.config[i])
+            else:
+                temp_config.append(self.config[i])
 
-    def decay_plasticity(self, decay_rate):
-        for param in self.meta_plasticity:
-            param = param * decay_rate
+        self.config = temp_config
+
+        # self.log_model()
 
     def extra_repr(self):
         info = ''
@@ -214,10 +252,28 @@ class Learner(nn.Module):
 
         return info
 
-
     def forward_plasticity(self, x):
 
         x = x.float()
+
+        # Do plasticity forward pass
+
+        idx_plasticity = 0
+
+        plasticity_embedding = x
+        self.plasticity_config = []
+        for name, meta, meta_param, param in self.plasticity_config:
+            name = name.split("-")[0]
+            if name == 'linear':
+
+                w, b = self.plasticity_backbone[idx_plasticity], self.plasticity_backbone[idx_plasticity + 1]
+                plasticity_embedding = F.linear(plasticity_embedding, w, b)
+                idx_plasticity += 2
+
+            elif name == "relu":
+                plasticity_embedding = F.relu(plasticity_embedding)
+            else:
+                assert (False)
 
         vars = self.context_models
 
@@ -226,74 +282,11 @@ class Learner(nn.Module):
         list_of_activations = []
         for name, meta, meta_param, param in self.config:
 
-            if name == 'conv2d':
-                assert(False)
+            if name == 'linear':
                 w, b = vars[idx], vars[idx + 1]
-                x = F.conv2d(x, w, b, stride=param[4], padding=param[5])
-
-
-            elif name == 'convt2d':
-                assert (False)
-                w, b = vars[idx], vars[idx + 1]
-                x = F.conv_transpose2d(x, w, b, stride=param[4], padding=param[5])
-
+                gating = F.linear(plasticity_embedding, w, b)
+                list_of_activations.append(torch.mean(F.relu(gating), 0))
                 idx += 2
-
-            elif name == 'linear':
-
-                w, b = vars[idx], vars[idx + 1]
-                gating = F.linear(x, w, b)
-                list_of_activations.append(torch.mean(F.relu(gating),0))
-                idx += 2
-            #
-            elif name == 'rep':
-                pass
-
-
-            elif name == 'flatten':
-
-                pass
-
-
-            elif name == 'reshape':
-
-                pass
-
-
-            elif name == 'relu':
-                pass
-
-            elif name == "modulate":
-                pass
-
-
-            elif name == 'leakyrelu':
-                pass
-
-            elif name == 'tanh':
-                pass
-            elif name == 'sigmoid':
-                pass
-            elif name == 'upsample':
-                pass
-
-            elif name == 'max_pool2d':
-                pass
-
-            elif name == 'avg_pool2d':
-                pass
-
-            elif name == 'bn':
-                w, b = vars[idx], vars[idx + 1]
-                # print("BN weifght = ", w)
-                # print("BN bias = ", b)
-                running_mean, running_var = self.vars_bn[bn_idx], self.vars_bn[bn_idx + 1]
-                x = F.batch_norm(x, running_mean, running_var, weight=w, bias=b, training=False)
-                idx += 2
-                bn_idx += 2
-
-            else:
-                raise NotImplementedError
 
         # make sure variable is used properly
         # list_of_activations.append(torch.mean(x, dim=0))
@@ -301,8 +294,6 @@ class Learner(nn.Module):
         assert bn_idx == len(self.vars_bn)
 
         return list_of_activations
-
-
 
     def forward(self, x, vars=None, bn_training=True, feature=False):
         """
@@ -322,6 +313,24 @@ class Learner(nn.Module):
         neuro_mod = self.neuromodulation
 
         x_input = x
+        idx_neuro = 0
+        self.neuromodulation_config = []
+        for name, meta, meta_param, param in self.neuromodulation_config:
+            name = name.split("-")[0]
+            if name == 'linear':
+
+                w, b = self.neuromodulation_backbone[idx_neuro], self.plasticity_backbone[idx_neuro + 1]
+                x_input = F.linear(x_input, w, b)
+                idx_neuro += 2
+
+            elif name == "relu":
+                x_input = F.relu(x_input)
+
+            else:
+                assert (False)
+
+        # Do a forward pass of modulation network here
+
         idx = 0
         bn_idx = 0
         #
@@ -332,7 +341,6 @@ class Learner(nn.Module):
                 w, b = vars[idx], vars[idx + 1]
                 x = F.conv2d(x, w, b, stride=param[4], padding=param[5])
 
-
                 idx += 2
 
                 # print(name, param, '\tout:', x.shape)
@@ -341,15 +349,12 @@ class Learner(nn.Module):
                 w, b = vars[idx], vars[idx + 1]
                 x = F.conv_transpose2d(x, w, b, stride=param[4], padding=param[5])
 
-
-
                 idx += 2
 
             elif name == 'linear':
 
                 w, b = vars[idx], vars[idx + 1]
                 x = F.linear(x, w, b)
-
 
                 idx += 2
             #
@@ -373,13 +378,14 @@ class Learner(nn.Module):
 
 
             elif name == 'relu':
-                x = F.relu(x, inplace=param[0])
+                x = F.relu(x)
 
 
             elif name == "modulate":
-                w, b = neuro_mod[idx-2], neuro_mod[idx - 1]
+                w, b = neuro_mod[idx - 2], neuro_mod[idx - 1]
                 x_mod = F.relu(F.linear(x_input, w, b))
                 x = x * x_mod
+                # assert(False)
 
 
             elif name == 'leakyrelu':
@@ -417,12 +423,21 @@ class Learner(nn.Module):
 
         return x
 
+    def log_model(self):
+        for i, (name, adaptation, meta_param, param) in enumerate(self.config):
+            logger.info("Model Params = %s", name)
+        for i, (name, adaptation, meta_param, param) in enumerate(self.neuromodulation_config):
+            logger.info("Neuromodulation Backbone = %s", name)
+        for i, (name, adaptation, meta_param, param) in enumerate(self.plasticity_config):
+            logger.info("Context backbone = %s", name)
+
     def zero_grad(self, vars=None):
         """
 
         :param vars:
         :return:
         """
+        assert (False)
         with torch.no_grad():
             if vars is None:
                 for p in self.vars:
@@ -438,6 +453,7 @@ class Learner(nn.Module):
         override this function since initial parameters will return with a generator.
         :return:
         """
+
         return self.vars
 
 # class Learner(nn.Module):

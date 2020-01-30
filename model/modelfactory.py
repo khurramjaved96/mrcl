@@ -5,7 +5,6 @@ class ModelFactory():
     @staticmethod
     def get_model(model_type, dataset, in_channels=6, num_actions=6, width=300):
 
-
         if "Sin" == dataset:
             # if model_type=="old":
             #     hidden_size = width
@@ -25,7 +24,7 @@ class ModelFactory():
             #         ('relu', True, [True]),
             #         ('linear', True, [num_actions, hidden_size])
             #     ]
-        #
+            #
             if model_type == "old":
                 hidden_size = width
                 return [
@@ -56,7 +55,6 @@ class ModelFactory():
                     ('relu', True, [True]),
                     ('linear', True, [num_actions, hidden_size])
                 ]
-
 
             if model_type == "anml":
                 hidden_size = width
@@ -94,16 +92,16 @@ class ModelFactory():
                 hidden_size = width
                 return [
 
-                    ('linear', False, True,  [hidden_size, in_channels]),
+                    ('linear', False, True, [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
                     ('relu', False, True, [True]),
                     ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', False, True, [True]),
                     # ('rep', []),
-                    ('linear', False, True,[hidden_size, hidden_size]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', False,True,  [True]),
+                    ('relu', False, True, [True]),
                     ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', False, True, [True]),
@@ -125,16 +123,16 @@ class ModelFactory():
                 hidden_size = width
                 return [
 
-                    ('linear', False, True,  [hidden_size, in_channels]),
+                    ('linear', False, True, [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
                     ('relu', False, True, [True]),
                     ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', False, True, [True]),
                     # ('rep', []),
-                    ('linear', False, True,[hidden_size, hidden_size]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
-                    ('relu', False,True,  [True]),
+                    ('relu', False, True, [True]),
                     ('linear', False, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', False, True, [True]),
@@ -176,7 +174,7 @@ class ModelFactory():
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
 
-                    ('linear', False,True,  [hidden_size, hidden_size]),
+                    ('linear', False, True, [hidden_size, hidden_size]),
                     ('relu', True, True, [True]),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     ('relu', True, True, [True]),
@@ -188,7 +186,7 @@ class ModelFactory():
                 hidden_size = width
                 return [
 
-                    ('linear', True, True,  [hidden_size, in_channels]),
+                    ('linear', True, True, [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
                     ('linear', True, True, [hidden_size, hidden_size]),
@@ -212,54 +210,64 @@ class ModelFactory():
                     ('relu', True, True, [True]),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     ('relu', True, True, [True]),
-                    ('linear', True, True, [num_actions, hidden_size])
+                    ('linear', True, True, [num_actions, hidden_size]),
+
                 ]
 
             if model_type == "maml-mod":
                 hidden_size = width
                 return [
 
-                    ('linear', True, True,  [hidden_size, in_channels]),
+                    # ('linear-plasticity-bone', False, True, [hidden_size, in_channels]),
+                    # ('relu-plasticity-bone', False, True, [True]),
+                    # ('linear-plasticity-bone', False, True, [hidden_size, hidden_size]),
+                    # ('relu-plasticity-bone', False, True, [True]),
+                    #
+                    # ('linear-neuromodulation-bone', False, True, [hidden_size, in_channels]),
+                    # ('relu-neuromodulation-bone', False, True, [True]),
+                    # ('linear-neuromodulation-bone', False, True, [hidden_size, hidden_size]),
+                    # ('relu-neuromodulation-bone', False, True, [True]),
+
+                    ('linear', True, True, [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
-                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
-                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
                     # ('rep', []),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
-                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
-                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
-                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
-                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     ('relu', True, True, [True]),
-                    ('modulate', True, False, [hidden_size, in_channels]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
                     ('linear', True, True, [hidden_size, hidden_size]),
                     ('relu', True, True, [True]),
-                    ('modulate', True, False, [hidden_size, in_channels]),
-                    ('linear', True, True, [num_actions, hidden_size])
+                    ('modulate', False, False, [hidden_size, in_channels]),
+                    ('linear', True, True, [num_actions, hidden_size]),
+
                 ]
-
-
 
             if model_type == "plasticity":
                 hidden_size = width
                 return [
 
-                    ('linear', True, False,  [hidden_size, in_channels]),
+                    ('linear', True, False, [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
                     ('linear', True, False, [hidden_size, hidden_size]),
@@ -290,7 +298,7 @@ class ModelFactory():
                 hidden_size = width
                 return [
 
-                    ('linear', True, False,  [hidden_size, in_channels]),
+                    ('linear', True, False, [hidden_size, in_channels]),
                     # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
                     ('modulate', True, False, [hidden_size, in_channels]),
@@ -342,16 +350,15 @@ class ModelFactory():
                 ('linear', True, [num_actions, 512])
             ]
 
-
         if dataset == "omniglot-er":
             channels = 128
             # channels = 256
             return [
-                ('conv2d', [int(channels/8), 1, 3, 3, 2, 0]),
+                ('conv2d', [int(channels / 8), 1, 3, 3, 2, 0]),
                 ('relu', [True]),
-                ('conv2d', [int(channels/4), int(channels/8), 3, 3, 1, 0]),
+                ('conv2d', [int(channels / 4), int(channels / 8), 3, 3, 1, 0]),
                 ('relu', [True]),
-                ('conv2d', [int(channels/2), int(channels/4), 3, 3, 2, 0]),
+                ('conv2d', [int(channels / 2), int(channels / 4), 3, 3, 2, 0]),
                 ('relu', [True]),
                 ('flatten', []),
                 ('rep', []),
@@ -364,15 +371,15 @@ class ModelFactory():
             channels = 128
             # channels = 256
             return [
-                ('conv2d', [int(channels/8), 1, 3, 3, 2, 0]),
+                ('conv2d', [int(channels / 8), 1, 3, 3, 2, 0]),
                 ('relu', [True]),
                 # ('gate', [True]),
                 ('bn', [16]),
-                ('conv2d', [int(channels/4), int(channels/8), 3, 3, 1, 0]),
+                ('conv2d', [int(channels / 4), int(channels / 8), 3, 3, 1, 0]),
                 ('relu', [True]),
                 # ('gate', [True]),
                 ('bn', [32]),
-                ('conv2d', [int(channels/2), int(channels/4), 3, 3, 2, 0]),
+                ('conv2d', [int(channels / 2), int(channels / 4), 3, 3, 2, 0]),
                 ('relu', [True]),
                 # ('gate', [True]),
                 ('bn', [64]),
@@ -456,19 +463,19 @@ class ModelFactory():
         if dataset == 'celeba':
             channels = 256
             return [
-                ('conv2d', [int(channels/8), 3, 3, 3, 2, 0]),
+                ('conv2d', [int(channels / 8), 3, 3, 3, 2, 0]),
                 ('relu', [True]),
                 # ('bn', [64]),
-                ('conv2d', [int(channels/4), int(channels/8), 3, 3, 2, 0]),
+                ('conv2d', [int(channels / 4), int(channels / 8), 3, 3, 2, 0]),
                 ('relu', [True]),
 
-                ('conv2d', [int(channels/4), int(channels/4), 3, 3, 2, 0]),
+                ('conv2d', [int(channels / 4), int(channels / 4), 3, 3, 2, 0]),
                 ('relu', [True]),
 
-                ('conv2d', [int(channels/2), int(channels/4), 3, 3, 2, 0]),
+                ('conv2d', [int(channels / 2), int(channels / 4), 3, 3, 2, 0]),
                 ('relu', [True]),
                 # ('bn', [128]),
-                ('conv2d', [channels, int(channels/2), 3, 3, 1, 1]),
+                ('conv2d', [channels, int(channels / 2), 3, 3, 1, 1]),
                 ('relu', [True]),
                 # ('bn', [256]),
                 ('conv2d', [channels, channels, 3, 3, 2, 0]),
@@ -477,7 +484,7 @@ class ModelFactory():
                 ('flatten', []),
                 ('rep', []),
 
-                ('linear', [256,  channels]),
+                ('linear', [256, channels]),
                 ('relu', [True]),
                 ('linear', [11000, 256])
             ]
@@ -513,7 +520,7 @@ class ModelFactory():
             ]
 
         if dataset == 'fullimagenet':
-            const =1
+            const = 1
             # channels = 256
             return [
                 ('conv2d', [64, 3, 3, 3, 1, 1]),

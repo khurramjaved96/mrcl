@@ -80,42 +80,33 @@ def main():
     else:
         device = torch.device('cpu')
 
-    maml = MetaLearnerRegression(args, config).to(device)
+    metalearner = MetaLearnerRegression(args, config).to(device)
 
     base = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Comparisons/Parameter_senstivity/Plot/mrcl_meta_sgd_parameter_sensitivity/0/1_1"
     # base = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Comparisons/Parameter_senstivity/Plot/meta_sgd_parameter_sensitivity/0/1_1"
     base = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Comparisons/Parameter_senstivity/Other/meta_sgd_warped_parameter_sensitivity/6/1_1"
-    base  = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Comparisons/Parameter_senstivity/Other/plasticity_warped_parameter_sensitivity/20/1_1"
+    base = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Comparisons/Parameter_senstivity/Other/plasticity_warped_parameter_sensitivity/20/1_1"
     base = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Comparisons/Parameter_senstivity/Other/mrcl_meta_sgd_parameter_sensitivity/6/1_1"
     base = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Comparisons/Parameter_senstivity/Plot/meta_sgd_parameter_sensitivity/6/1_1"
     base = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Comparisons/Parameter_senstivity/Plot/meta_sgd_parameter_sensitivity/2/1_1"
     base = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Comparisons/Parameter_senstivity/Plot/mrcl_meta_sgd_parameter_sensitivity/2/1_1"
     base = args["base"]
-    maml.net = net = torch.load(base + "/net.model",
+    metalearner.net = net = torch.load(base + "/net.model",
                                 map_location="cpu").to(device)
     import json
-    with open(base+"/metadata.json") as json_file:
+    with open(base + "/metadata.json") as json_file:
         data = json.load(json_file)
     layers_learn = data["results"]["Layers meta values"]
-    for (name, param) in maml.net.named_parameters():
+    for (name, param) in metalearner.net.named_parameters():
         if name in layers_learn:
             param.learn = layers_learn[name]
             print(name, layers_learn[name])
 
 
-
-    tmp = filter(lambda x: x.requires_grad, maml.parameters())
-    num = sum(map(lambda x: np.prod(x.shape), tmp))
-    # logger.info(maml)
-    logger.info('Total trainable tensors: %d', num)
-    #
-    accuracy = 0
-
     lrs = data["params"]["update_lr"]
     plasticity = not data["params"]["no_plasticity"]
     sigmoid = not data["params"]["no_sigmoid"]
-    old_net = copy.deepcopy(maml.net)
-
+    old_net = copy.deepcopy(metalearner.net)
 
     lr_results = {}
     lr_results[lrs] = []
@@ -129,9 +120,7 @@ def main():
         if torch.cuda.is_available():
             x_traj, y_traj, x_rand, y_rand = x_traj.cuda(), y_traj.cuda(), x_rand.cuda(), y_rand.cuda()
 
-        net = maml.net
-        net.modulate = False
-
+        net = metalearner.net
 
         for k in range(len(x_traj)):
 
@@ -140,107 +129,20 @@ def main():
             for no, val in enumerate(y_traj[k, :, 1].long()):
                 logits_select.append(logits[no, val])
             logits = torch.stack(logits_select).unsqueeze(1)
-            loss = F.mse_loss(logits, y_traj[k, :, 0].unsqueeze(1))
-            # if k < 10:
+            loss_temp = F.mse_loss(logits, y_traj[k, :, 0].unsqueeze(1))
 
-            grad = maml.clip_grad(torch.autograd.grad(loss,list(filter(lambda x: x.learn, list(net.parameters())))))
-            # else:
-            #     grad = torch.autograd.grad(loss, net.parameters())
 
-            # import matplotlib.pyplot as  plt
-            # for (name, param) in net.named_parameters():
-            #
-            #     if "meta" in name and k ==0:
-            #
-            #         # print(param)
-            #         histo_plas = torch.sigmoid(param).detach().numpy()
-            #         # if len(histo_plas.shape) > 1:
-            #         #     # print(histo_plas.shape)
-            #         #     plt.imshow(histo_plas)
-            #         #     plt.colorbar()
-            #         #     plt.show()
-            #         #     plt.clf()
-            #
-            #
-            #         histo_plas = torch.sigmoid(param).flatten().detach().numpy()
-            #         plt.hist(histo_plas)
-            #         plt.title(name)
-            #         plt.show()
-            #         plt.clf()
-            #         #
-            #         # plt.savefig(my_experiment.path+name+".pdf", format="pdf")
-            #         # plt.clf()
-            # 0/0
-            fast_weights = []
-            counter = 0
-            for (name, p) in net.named_parameters():
-                if "meta" in name or "neuro" in name:
-                    pass
-                if p.learn:
-                    g = grad[counter]
-                    # print(g)
-                    mask = net.meta_plasticity[counter]
-                    # print(g.shape, p.shape, mask.shape)
-                    if plasticity:
-                        if sigmoid:
-                            p.data -=  lrs * g * torch.sigmoid(mask)
-                        else:
-                            p.data -= lrs * g * mask
-                    else:
-                        p.data -= lrs * g
-                    counter += 1
-                else:
-                    pass
-                    # temp_weight = p
+            grad = metalearner.clip_grad(torch.autograd.grad(loss_temp, list(filter(lambda x: x.learn, list(net.parameters())))))
 
-                # if p.learn:
-                #     # print("Name = ", name)
-                #     # print("Counter = ", counter)
-                #
-                #     mask = net.meta_vars[counter]
-                #     # print(g.shape, mask.shape)
-                #     # if counter==0 :
-                #     #     temp_weight = p - lrs * g
-                #     # else:
-                #     temp_weight = p - lrs * g * torch.sigmoid(mask)
-                #     # temp_weight = p - lrs * g
-                #
-                #
-                #     plasticity_plot = torch.sigmoid(mask).detach().numpy()
-                #     weight_plot = p.detach().numpy()
-                #     gradient_plot = g.detach().numpy()
-                #     # if len(weight_plot.shape) > 1:
-                #     #     plt.imshow(plasticity_plot)
-                #     #     plt.title("Plasticity "+name + str(counter))
-                #     #     plt.colorbar()
-                #     #     plt.show()
-                #     #     plt.clf()
-                #     #     plt.imshow(weight_plot)
-                #     #     plt.title("Weight " + name + str(counter))
-                #     #     plt.colorbar()
-                #     #     plt.show()
-                #     #     plt.clf()
-                #     #     plt.imshow(gradient_plot)
-                #     #     plt.title("Gradient " + name + str(counter))
-                #     #     plt.colorbar()
-                #     #     plt.show()
-                #     #     plt.clf()
-                #     #
-                #     #     plt.imshow(gradient_plot*plasticity_plot)
-                #     #     plt.title("Effective gradient" + name + str(counter))
-                #     #     plt.colorbar()
-                #     #     plt.show()
-                #     #     plt.clf()
-                #
-                #     counter += 1
-                #     if counter > 6 or temp < 1 or True:
-                #         p.data = temp_weight
-                # else:
-                #     temp_weight = p
-                # fast_weights.append(temp_weight)
+            grad = metalearner.clip_grad(
+                torch.autograd.grad(loss_temp, list(filter(lambda x: x.learn, list(net.parameters())))))
 
-            # 0/0
-        # 0/0
+            list_of_context = None
+            if metalearner.context:
+                list_of_context = metalearner.net.forward_plasticity(x_traj[k])
+
+            metalearner.inner_update(net, grad, adaptation_lr, list_of_context)
+
         with torch.no_grad():
             logits = net(x_rand[0], vars=None, bn_training=False)
             # print("Logits = ", logits)
@@ -260,7 +162,7 @@ def main():
 
     logger.info("Avg MSE LOSS  for lr %s = %s", str(lrs), str(np.mean(lr_results[lrs])))
 
-        # torch.save(maml.net, my_experiment.path + "learner.model")
+    # torch.save(maml.net, my_experiment.path + "learner.model")
 
 
 #

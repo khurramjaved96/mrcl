@@ -31,21 +31,8 @@ class MetaLearnerRegression(nn.Module):
         self.remaining_meta_weights = []
         self.context = args["context_plasticity"]
 
-        if args['model_path'] is not None:
-            net_old = Learner.Learner(config)
-            logger.info("Loading model from path %s", args["model_path"])
-            self.net = torch.load(args['model_path'], map_location='cpu')
-            list_of_param = list(net_old.parameters())
-            for counter, old in enumerate(self.net.parameters()):
-                old.learn = list_of_param[counter].learn
-            for (name, param) in self.net.named_parameters():
-                if "meta" in name:
-                    param.learn = False
-                elif "neuro" in name:
-                    param.learn = False
-        #
-        else:
-            self.net = Learner.Learner(config)
+        self.load_model(args, config)
+
         neuro_weights = []
         context_models = []
         plastic_weights = []
@@ -57,7 +44,7 @@ class MetaLearnerRegression(nn.Module):
             elif "neuromodulation" in name:
                 logger.info("Neuro weight = %s, %s", name, str(param.shape))
                 neuro_weights.append(param)
-            elif "context_models" in name:
+            elif "context_models" in name or "plasticity_backbone" in name:
                 logger.info("Context plasticity weight = %s, %s", name, str(param.shape))
                 context_models.append(param)
             else:
@@ -84,6 +71,20 @@ class MetaLearnerRegression(nn.Module):
         if self.context:
             self.optimizer_context_models = optim.Adam(context_models, lr=args["context_lr"])
 
+    def load_model(self, args, config):
+        if args['model_path'] is not None:
+            net_old = Learner.Learner(config)
+            # logger.info("Loading model from path %s", args["model_path"])
+            self.net = torch.load(args['model_path'] + "/net.model",
+                                  map_location="cpu")
+
+            for (n1, old_model), (n2, loaded_model) in zip(net_old.named_parameters(), self.net.named_parameters()):
+                loaded_model.learn = old_model.learn
+                loaded_model.meta = old_model.meta
+        else:
+            self.net = Learner.Learner(config)
+
+    #
     def inner_update(self, net, grad, adaptation_lr, list_of_context=None):
         counter = 0
         counter_lr = 0
@@ -91,6 +92,10 @@ class MetaLearnerRegression(nn.Module):
         for (name, p) in net.named_parameters():
             if p.learn:
                 g = grad[counter]
+                if self.context:
+                    if len(g.shape) > 1:
+                        g = g * list_of_context[counter_lr].unsqueeze(1)
+                        counter_lr += 1
                 if self.plasticity:
                     mask = net.meta_plasticity[counter]
                     if self.sigmoid:
@@ -98,10 +103,6 @@ class MetaLearnerRegression(nn.Module):
                     else:
                         p.data -= adaptation_lr * g * mask
                 else:
-                    if self.context:
-                        if len(g.shape) > 1:
-                            g = g * list_of_context[counter_lr].unsqueeze(1)
-                            counter_lr += 1
                     p.data -= adaptation_lr * g
                 counter += 1
 
@@ -121,16 +122,7 @@ class MetaLearnerRegression(nn.Module):
             p.grad = (g * (g > -norm).float()) - ((g < -norm).float()) * norm
         return net
 
-    def clip_plasticity(self):
-        assert (False)
-        for (name, param) in self.net.named_parameters():
-            if "meta" in name:
-                param.data = param.data * (param.data < 1).float() + (param.data >= 1).float()
-                param.data = param.data * (param.data > 0).float()
-        assert (False)
-
     def meta_plasticity_mask(self):
-        assert (False)
         counter = 0
         for (name, p) in self.net.named_parameters():
             if "meta" in name or "neuro" in name:
@@ -162,17 +154,20 @@ class MetaLearnerRegression(nn.Module):
         if self.context:
             list_of_context = self.net.forward_plasticity(x_traj[0])
 
-
-
         fast_weights = []
         learn_counter = 0
         context_counter = 0
+
         for (name, p) in self.net.named_parameters():
-            if "meta" in name or "neuro" in name or "context_models" in name:
+            if "meta" in name or "neuro" in name or "context_models" in name or "backbone" in name:
                 pass
             else:
                 if p.learn:
                     g = grad[learn_counter]
+                    if self.context:
+                        if len(g.shape) > 1:
+                            g = g * list_of_context[context_counter].unsqueeze(1)
+                            context_counter += 1
                     if self.plasticity:
                         mask = self.net.meta_plasticity[learn_counter]
                         if self.sigmoid:
@@ -180,10 +175,6 @@ class MetaLearnerRegression(nn.Module):
                         else:
                             temp_weight = p - self.update_lr * g * mask
                     else:
-                        if self.context:
-                            if len(g.shape) > 1:
-                                g = g * list_of_context[context_counter].unsqueeze(1)
-                                context_counter += 1
 
                         temp_weight = p - self.update_lr * g
                     learn_counter += 1
@@ -227,6 +218,10 @@ class MetaLearnerRegression(nn.Module):
             for p in fast_weights:
                 if p.learn:
                     g = grad[learn_counter]
+                    if self.context:
+                        if len(g.shape) > 1:
+                            g = g * list_of_context[context_counter].unsqueeze(1)
+                            context_counter += 1
                     if self.plasticity:
                         mask = self.net.meta_plasticity[learn_counter]
                         if self.sigmoid:
@@ -235,10 +230,6 @@ class MetaLearnerRegression(nn.Module):
                             temp_weight = p - self.update_lr * g * mask
 
                     else:
-                        if self.context:
-                            if len(g.shape) > 1:
-                                g = g * list_of_context[context_counter].unsqueeze(1)
-                                context_counter += 1
                         temp_weight = p - self.update_lr * g
 
                     learn_counter += 1
@@ -250,14 +241,14 @@ class MetaLearnerRegression(nn.Module):
 
             fast_weights = fast_weights_new
 
-        logits_q = self.net(x_rand[0, 0:int((k + 1) * len(x_rand[0]) / len(x_traj)), :], fast_weights,
+        logits_q = self.net(x_rand[0], fast_weights,
                             bn_training=True)
 
         logits_select = []
-        for no, val in enumerate(y_rand[0, 0:int((k + 1) * len(x_rand[0]) / len(x_traj)), 1].long()):
+        for no, val in enumerate(y_traj[k, :, 1].long()):
             logits_select.append(logits_q[no, val])
         prediction = torch.stack(logits_select).unsqueeze(1)
-        loss_q = F.mse_loss(prediction, y_rand[0, 0:int((k + 1) * len(x_rand[0]) / len(x_traj)), 0].unsqueeze(1))
+        loss_q = F.mse_loss(prediction, y_rand[0, :, 0].unsqueeze(1))
 
         meta_losses[k + 1] += loss_q
 

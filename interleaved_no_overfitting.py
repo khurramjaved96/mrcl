@@ -22,7 +22,15 @@ def main():
     all_args = vars(p.parse_known_args()[0])
     print("All args = ", all_args)
 
+
     args = utils.get_run(vars(p.parse_known_args()[0]), rank)
+
+    if args['model_path'] is not None:
+        # args_old = args
+        args_temp_temp, layers_learn = utils.load_run(args['model_path'])
+        # args["no_meta"] = args_old["no_meta"]
+        # args["model_path"] = args_old["model_path"]
+        # args["name"] = args_old["name"]
 
     utils.set_seed(args["seed"])
 
@@ -55,6 +63,15 @@ def main():
     replay_buffer = utils.replay_buffer(30)
     metalearner = MetaLearnerRegression(args, config).to(device)
 
+    if args['model_path'] is not None:
+        metalearner.net = torch.load(args['model_path'] + "/net.model",
+                                       map_location="cpu").to(device)
+
+    for (name, param) in metalearner.net.named_parameters():
+        if name in layers_learn:
+            param.learn = layers_learn[name]
+            print(name, layers_learn[name])
+
     tmp = filter(lambda x: x.requires_grad, metalearner.parameters())
     num = sum(map(lambda x: np.prod(x.shape), tmp))
     logger.info('Total trainable tensors: %d', num)
@@ -71,6 +88,9 @@ def main():
 
     for step in range(args["epoch"]):
         # logger.warning("ONLY 20 FUNCTIONS")
+        if args["sanity"]:
+            metalearner.load_model(args, config)
+            metalearner.net = metalearner.net.to(device)
         if step % LOG_INTERVAL == 0:
             logger.warning("####\t STEP %d \t####", step)
 
@@ -131,10 +151,7 @@ def main():
 
                         meta_loss = metalearner(x_traj_meta, y_traj_meta, x_rand_meta, y_rand_meta)
                         loss_history.append(meta_loss[-1].detach().cpu().item())
-                        # if metalearner.meta_optim is not None:
-                        #     metalearner.meta_optim.step()
-                        # if not args["no_plasticity"]:
-                        #     metalearner.meta_optim_plastic.step()
+
 
                         running_meta_loss = running_meta_loss * 0.97 + 0.03 * meta_loss[-1].detach().cpu()
                         running_meta_loss_fixed = running_meta_loss / (1 - (0.97 ** (meta_steps_counter)))
@@ -142,11 +159,6 @@ def main():
                         writer.add_scalar('/metatrain/train/runningaccuracy', running_meta_loss_fixed,
                                           meta_steps_counter)
 
-                        # if step % LOG_INTERVAL*10 == 0:
-                        #     logger.debug(
-                        #         'Meta-training running_meta_loss: Before adaptation: %f \t After adaptation: %f',
-                        #         meta_loss[0].item(),
-                        #         meta_loss[-1].item())
 
         replay_buffer.add([x_traj_cpu, y_traj_cpu, x_rand_cpu, y_rand_cpu])
 
@@ -181,7 +193,12 @@ def main():
             dict_names = {}
             for (name, param) in metalearner.net.named_parameters():
                 dict_names[name] = param.learn
+
+            dict_names_meta = {}
+            # for (name, param) in metalearner.net.named_parameters():
+            #     dict_names_meta[name] = param.meta
             my_experiment.add_result("Layers meta values", dict_names)
+            # my_experiment.add_result("Layers meta values", dict_names_meta)
             my_experiment.add_result("Meta loss", loss_history)
             my_experiment.add_result("Adaptation loss", adaptation_loss_history)
             my_experiment.add_result("Running adaption loss", adaptation_running_loss_history)
