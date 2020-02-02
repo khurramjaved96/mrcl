@@ -85,20 +85,31 @@ class MetaLearnerRegression(nn.Module):
             self.net = Learner.Learner(config)
 
     #
-    def inner_update(self, net, grad, adaptation_lr, list_of_context=None):
+    def inner_update(self, net, grad, adaptation_lr, list_of_context=None, log=False):
         counter = 0
         counter_lr = 0
 
         for (name, p) in net.named_parameters():
+            if log:
+                logger.debug("\nName = %s", name)
             if p.learn:
+                if log:
+                    logger.debug("Learn true")
                 g = grad[counter]
                 if self.context:
-                    if len(g.shape) > 1:
-                        g = g * list_of_context[counter_lr].unsqueeze(1)
-                        counter_lr += 1
+                    if log:
+                        logger.debug("Context plasticity true")
+                    if log:
+                        logger.debug("Grad modified using context plasticity")
+                    g = g * list_of_context[counter_lr].view(g.shape)
+                    counter_lr += 1
                 if self.plasticity:
+                    if log:
+                        logger.debug("Static plasticity true")
                     mask = net.meta_plasticity[counter]
                     if self.sigmoid:
+                        if log:
+                            logger.debug("Sigmoid true")
                         p.data -= adaptation_lr * g * torch.sigmoid(mask)
                     else:
                         p.data -= adaptation_lr * g * mask
@@ -124,6 +135,7 @@ class MetaLearnerRegression(nn.Module):
 
     def meta_plasticity_mask(self):
         counter = 0
+        return
         for (name, p) in self.net.named_parameters():
             if "meta" in name or "neuro" in name:
                 pass
@@ -165,9 +177,8 @@ class MetaLearnerRegression(nn.Module):
                 if p.learn:
                     g = grad[learn_counter]
                     if self.context:
-                        if len(g.shape) > 1:
-                            g = g * list_of_context[context_counter].unsqueeze(1)
-                            context_counter += 1
+                        g = g * list_of_context[context_counter].view(g.shape)
+                        context_counter += 1
                     if self.plasticity:
                         mask = self.net.meta_plasticity[learn_counter]
                         if self.sigmoid:
@@ -214,14 +225,13 @@ class MetaLearnerRegression(nn.Module):
             fast_weights_new = []
             learn_counter = 0
             context_counter = 0
-
+            #
             for p in fast_weights:
                 if p.learn:
                     g = grad[learn_counter]
                     if self.context:
-                        if len(g.shape) > 1:
-                            g = g * list_of_context[context_counter].unsqueeze(1)
-                            context_counter += 1
+                        g = g * list_of_context[context_counter].view(g.shape)
+                        context_counter += 1
                     if self.plasticity:
                         mask = self.net.meta_plasticity[learn_counter]
                         if self.sigmoid:
@@ -243,11 +253,12 @@ class MetaLearnerRegression(nn.Module):
 
         logits_q = self.net(x_rand[0], fast_weights,
                             bn_training=True)
-
+        #
         logits_select = []
-        for no, val in enumerate(y_traj[k, :, 1].long()):
+        for no, val in enumerate(y_rand[0, :, 1].long()):
             logits_select.append(logits_q[no, val])
         prediction = torch.stack(logits_select).unsqueeze(1)
+        # print(prediction.shape, y_rand.shape)
         loss_q = F.mse_loss(prediction, y_rand[0, :, 0].unsqueeze(1))
 
         meta_losses[k + 1] += loss_q

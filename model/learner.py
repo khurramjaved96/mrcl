@@ -128,16 +128,27 @@ class Learner(nn.Module):
                 self.neuromodulation.append(w_mod)
                 self.neuromodulation.append(b_mod)
 
-                w_context_plasticity = nn.Parameter(torch.ones(param[0], self.context_backbone_width))
+                w_context_plasticity = nn.Parameter(torch.ones(param[0]*param[1], self.context_backbone_width))
                 w_context_plasticity.learn = False
                 torch.nn.init.kaiming_normal_(w_context_plasticity)
-                b_context_plasticity = nn.Parameter(torch.zeros(param[0]))
+                b_context_plasticity = nn.Parameter(torch.zeros(param[0]*param[1]))
                 b_context_plasticity.learn = False
                 w_context_plasticity.meta = True
                 b_context_plasticity.meta = True
-
+                #
                 self.context_models.append(w_context_plasticity)
                 self.context_models.append(b_context_plasticity)
+
+                w_context_plasticity_bias = nn.Parameter(torch.ones(param[0], self.context_backbone_width))
+                w_context_plasticity_bias.learn = False
+                torch.nn.init.kaiming_normal_(w_context_plasticity_bias)
+                b_context_plasticity_bias = nn.Parameter(torch.zeros(param[0]))
+                b_context_plasticity_bias.learn = False
+                w_context_plasticity_bias.meta = True
+                b_context_plasticity_bias.meta = True
+                #
+                self.context_models.append(w_context_plasticity_bias)
+                self.context_models.append(b_context_plasticity_bias)
 
                 if adaptation:
                     w = nn.Parameter(torch.zeros(*param))
@@ -197,6 +208,11 @@ class Learner(nn.Module):
 
         # self.log_model()
 
+    def reset_vars(self):
+        for a in self.vars:
+            if len(a.shape) > 1:
+                logger.info("Resetting weight")
+                torch.nn.init.kaiming_normal_(a)
     def extra_repr(self):
         info = ''
 
@@ -252,14 +268,20 @@ class Learner(nn.Module):
 
         return info
 
-    def forward_plasticity(self, x):
+    def forward_plasticity(self, x, log=False):
 
         x = x.float()
+
+
+        x = torch.mean(x, 0, keepdim=True)
 
         # Do plasticity forward pass
 
         idx_plasticity = 0
 
+        if log:
+            logger.debug("Plasticity embedding = x")
+            logger.debug("X shape = %s", str(x.shape))
         plasticity_embedding = x
         self.plasticity_config = []
         for name, meta, meta_param, param in self.plasticity_config:
@@ -269,12 +291,17 @@ class Learner(nn.Module):
                 w, b = self.plasticity_backbone[idx_plasticity], self.plasticity_backbone[idx_plasticity + 1]
                 plasticity_embedding = F.linear(plasticity_embedding, w, b)
                 idx_plasticity += 2
+                if log:
+                    logger.debug("Backbone Linear transformation of plasticity embedding using param %s %s", str(w.shape), str(b.shape))
 
             elif name == "relu":
                 plasticity_embedding = F.relu(plasticity_embedding)
+                if log:
+                    logger.debug("Relu plastic embedding")
             else:
                 assert (False)
-
+        if log:
+            logger.debug("Plasticity embedding computing\n")
         vars = self.context_models
 
         idx = 0
@@ -286,8 +313,22 @@ class Learner(nn.Module):
                 w, b = vars[idx], vars[idx + 1]
                 gating = F.linear(plasticity_embedding, w, b)
                 list_of_activations.append(torch.mean(F.relu(gating), 0))
-                idx += 2
 
+                w_bias, b_bias = vars[idx+2], vars[idx + 3]
+                gating_bias = F.linear(plasticity_embedding, w_bias, b_bias)
+                list_of_activations.append(torch.mean(F.relu(gating_bias), 0))
+                #
+                if log:
+                    logger.debug("Linear transformation of embedding to get shape %s", str(list_of_activations[-2].shape))
+                    logger.debug("Linear transformation weights shape %s %s", str(w.shape), str(b.shape))
+
+                    logger.debug("Linear transformation of embedding to get shape %s",
+                                 str(list_of_activations[-1].shape))
+                    logger.debug("Linear transformation weights shape %s %s", str(w_bias.shape), str(b_bias.shape))
+
+                idx += 4
+        if log:
+            logger.debug("\n")
         # make sure variable is used properly
         # list_of_activations.append(torch.mean(x, dim=0))
         assert idx == len(vars)
@@ -295,7 +336,7 @@ class Learner(nn.Module):
 
         return list_of_activations
 
-    def forward(self, x, vars=None, bn_training=True, feature=False):
+    def forward(self, x, vars=None, bn_training=True, feature=False, log=False):
         """
         This function can be called by finetunning, however, in finetunning, we dont wish to update
         running_mean/running_var. Thought weights/bias of bn is updated, it has been separated by fast_weights.
@@ -314,6 +355,9 @@ class Learner(nn.Module):
 
         x_input = x
         idx_neuro = 0
+        if log:
+            logger.debug("\nNeuromodulation embedding = x with shape %s", str(x_input.shape))
+
         self.neuromodulation_config = []
         for name, meta, meta_param, param in self.neuromodulation_config:
             name = name.split("-")[0]
@@ -321,9 +365,13 @@ class Learner(nn.Module):
 
                 w, b = self.neuromodulation_backbone[idx_neuro], self.plasticity_backbone[idx_neuro + 1]
                 x_input = F.linear(x_input, w, b)
+                if log:
+                    logger.debug("Backbone Linear transformation to get shape %s", str(x_input.shape))
                 idx_neuro += 2
 
             elif name == "relu":
+                if log:
+                    logger.debug("Backbone Relu")
                 x_input = F.relu(x_input)
 
             else:
@@ -353,9 +401,13 @@ class Learner(nn.Module):
 
             elif name == 'linear':
 
-                w, b = vars[idx], vars[idx + 1]
-                x = F.linear(x, w, b)
 
+                w, b = vars[idx], vars[idx + 1]
+
+                x = F.linear(x, w, b)
+                if log:
+                    logger.debug("Applying linear transformation to get shape %s", str(x.shape))
+                    logger.debug("Weights used %s %s", str(w.shape), str(b.shape))
                 idx += 2
             #
             elif name == 'rep':
@@ -378,13 +430,18 @@ class Learner(nn.Module):
 
 
             elif name == 'relu':
+                if log:
+                    logger.debug("Relu x")
                 x = F.relu(x)
 
 
             elif name == "modulate":
+
                 w, b = neuro_mod[idx - 2], neuro_mod[idx - 1]
                 x_mod = F.relu(F.linear(x_input, w, b))
                 x = x * x_mod
+                if log:
+                    logger.debug("Modulating x. Modulation shape %s, x Shape %s", str(x_mod.shape), str(x.shape))
                 # assert(False)
 
 

@@ -13,11 +13,11 @@ class Parser(configargparse.ArgParser):
         self.add('--meta_lr', type=float, nargs='+', help='meta-level outer learning rate', default=[1e-4])
         self.add('--gpus', type=int, help='meta-level outer learning rate', default=1)
         self.add('--plasticity_lr', nargs='+', type=float, help='meta-level outer learning rate',
-                 default=[0.3])
+                 default=[1e-4])
         self.add('--modulation_lr', nargs='+', type=float, help='meta-level outer learning rate',
                  default=[1e-4])
         self.add('--context_lr', nargs='+', type=float, help='meta-level outer learning rate',
-                 default=[1e-2])
+                 default=[1e-4])
         self.add('--update_lr', nargs='+', type=float, help='task-level inner update learning rate',
                  default=[0.003])
         self.add('--update_step', type=int, help='task-level inner update steps', default=10)
@@ -29,6 +29,8 @@ class Parser(configargparse.ArgParser):
         self.add("--no-sigmoid", action="store_true")
         self.add("--neuro", action="store_true")
         self.add("--no-meta", action="store_true")
+        self.add("--no-save", action="store_true")
+        self.add("--no-adaptation", action="store_true")
         self.add("--sanity", action="store_true")
         self.add("--context-plasticity", action="store_true")
         self.add('--seed', nargs='+', help='Seed', default=[90], type=int)
@@ -36,4 +38,4 @@ class Parser(configargparse.ArgParser):
         self.add('--rank', type=int, help='meta batch size, namely task num', default=0)
         self.add("--width", type=int, default=400)
 
-
+#
