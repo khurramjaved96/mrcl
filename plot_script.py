@@ -61,7 +61,7 @@ for current_experimnet_data in data:
         print("X = ", len(temp_data))
         dictionary_temp["x"] = dictionary_temp["x"] + temp_data
         # print(run_temp)
-        run_temp = list(np.log(run_temp))
+        run_temp = list(np.log10(run_temp))
         # print(run_temp)
         temp_data_2 = []
         for counter_temp in range(0, len(run_temp), 20):
@@ -93,5 +93,5 @@ for current_experimnet_data in data:
     #     # plt.errorbar(list(results_dict[folder].keys()), list(results_dict[folder].values()), yerr= list(std_dict[folder].values()) , marker='s')
 
 plt.tight_layout()
-plt.savefig("plots/rebuttal_adaptation_smooth_log.pdf", format="pdf")
+plt.savefig("plots/meta_smooth_all.pdf", format="pdf")
 quit()

@@ -283,6 +283,7 @@ class MetaLearnerRegression(nn.Module):
         if len(self.remaining_meta_weights) > 0:
             self.optimizer.step()
         if self.plasticity:
+            assert(False)
             self.optimizer_plastic.step()
         if self.neuro:
             self.optimizer_neuromodulation.step()

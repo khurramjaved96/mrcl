@@ -229,38 +229,39 @@ class ModelFactory():
                     # ('relu-neuromodulation-bone', False, True, [True]),
 
                     ('linear', True, True, [hidden_size, in_channels]),
-                    # ('bn', [hidden_size]),
-                    ('relu', True, True, [True]),
                     ('modulate', False, False, [hidden_size, in_channels]),
-                    ('linear', True, True, [hidden_size, hidden_size]),
-                    # ('bn', [hidden_size]),
                     ('relu', True, True, [True]),
-                    ('modulate', False, False, [hidden_size, in_channels]),
-                    # ('rep', []),
-                    ('linear', True, True, [hidden_size, hidden_size]),
-                    # ('bn', [hidden_size]),
-                    ('relu', True, True, [True]),
-                    ('modulate', False, False, [hidden_size, in_channels]),
-                    ('linear', True, True, [hidden_size, hidden_size]),
-                    # ('bn', [hidden_size]),
-                    ('relu', True, True, [True]),
-                    ('modulate', False, False, [hidden_size, in_channels]),
-                    ('linear', True, True, [hidden_size, hidden_size]),
-                    # ('bn', [hidden_size]),
-                    ('relu', True, True, [True]),
-                    ('modulate', False, False, [hidden_size, in_channels]),
-                    ('linear', True, True, [hidden_size, hidden_size]),
-                    # ('bn', [hidden_size]),
-                    ('relu', True, True, [True]),
-                    ('modulate', False, False, [hidden_size, in_channels]),
-                    ('linear', True, True, [hidden_size, hidden_size]),
-                    ('relu', True, True, [True]),
-                    ('modulate', False, False, [hidden_size, in_channels]),
-                    ('linear', True, True, [hidden_size, hidden_size]),
-                    ('relu', True, True, [True]),
-                    ('modulate', False, False, [hidden_size, in_channels]),
-                    ('linear', True, True, [num_actions, hidden_size]),
 
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
+                    ('relu', True, True, [True]),
+
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
+                    ('relu', True, True, [True]),
+
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
+                    ('relu', True, True, [True]),
+
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
+                    ('relu', True, True, [True]),
+
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
+                    ('relu', True, True, [True]),
+
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
+                    ('relu', True, True, [True]),
+
+                    ('linear', True, True, [hidden_size, hidden_size]),
+                    ('modulate', False, False, [hidden_size, in_channels]),
+                    ('relu', True, True, [True]),
+
+                    ('linear', True, True, [num_actions, hidden_size]),
+                    ('modulate', False, False, [hidden_size, in_channels])
                 ]
 
             if model_type == "plasticity":
