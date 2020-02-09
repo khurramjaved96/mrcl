@@ -10,7 +10,6 @@ from torch.nn import functional as F
 import numpy as np
 from matplotlib import pyplot as plt
 
-
 transition = namedtuple('x_traj', 'state, next_state, action, reward, is_terminal')
 import torch
 
@@ -18,6 +17,7 @@ def set_seed(seed):
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
+    random.seed(seed)
 
 
 def load_run(model_path):
@@ -405,25 +405,27 @@ def show_images_grid(imgs_, num_images=25):
     plt.show()
 
 import torch
-
-def construct_set(iterators, sampler, steps):
+#
+def construct_set(iterators, sampler, steps, shuffle=True):
     x_traj = []
     y_traj = []
-    list_of_ids = list(range(sampler.capacity - 1))
-
-    start_index = 0
-
-    for id, it1 in enumerate(iterators):
-        for inner in range(steps):
-            x, y = sampler.sample_batch(it1, list_of_ids[(id + start_index) % len(list_of_ids)], 32)
-            x_traj.append(x)
-            y_traj.append(y)
-    #
 
     x_rand = []
     y_rand = []
+
+
+    id_map = list(range(sampler.capacity - 1))
+    if shuffle:
+        random.shuffle(id_map)
+
     for id, it1 in enumerate(iterators):
-        x, y = sampler.sample_batch(it1, list_of_ids[(id + start_index) % len(list_of_ids)], 32)
+        id_mapped = id_map[id]
+        for inner in range(steps):
+            x, y = sampler.sample_batch(it1, id_mapped, 32)
+            x_traj.append(x)
+            y_traj.append(y)
+
+        x, y = sampler.sample_batch(it1, id_mapped, 32)
         x_rand.append(x)
         y_rand.append(y)
 
@@ -432,5 +434,6 @@ def construct_set(iterators, sampler, steps):
 
     x_traj = torch.stack(x_traj)
     y_traj = torch.stack(y_traj)
+
 
     return x_traj, y_traj, x_rand, y_rand

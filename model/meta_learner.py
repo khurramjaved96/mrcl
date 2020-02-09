@@ -33,10 +33,12 @@ class MetaLearnerRegression(nn.Module):
 
         self.load_model(args, config)
 
+        self.attention = False
         neuro_weights = []
         context_models = []
         plastic_weights = []
         other_meta_weights = []
+        attention_weights = []
         for name, param in self.net.named_parameters():
             if "meta_plasticity" in name:
                 logger.info("Meta plasticity weight = %s, %s", name, str(param.shape))
@@ -47,6 +49,10 @@ class MetaLearnerRegression(nn.Module):
             elif "context_models" in name or "plasticity_backbone" in name:
                 logger.info("Context plasticity weight = %s, %s", name, str(param.shape))
                 context_models.append(param)
+            elif "attention" in name:
+                logger.info("Attention weight = %s, %s", name, str(param.shape))
+                attention_weights.append(param)
+
             else:
                 if param.meta:
                     logger.info("Other meta weights = %s, %s", name, str(param.shape))
@@ -67,7 +73,11 @@ class MetaLearnerRegression(nn.Module):
             logger.warning("Zero meta parameters in the forward pass")
 
         self.optimizer_plastic = optim.Adam(plastic_weights, lr=args["plasticity_lr"])
-        self.optimizer_neuromodulation = optim.Adam(neuro_weights, lr=args["modulation_lr"])
+        if len(neuro_weights) > 0:
+            self.optimizer_neuromodulation = optim.Adam(neuro_weights, lr=args["modulation_lr"])
+        if len(attention_weights) > 0 :
+            self.optimizer_attention = optim.Adam(attention_weights, lr=args["attention_lr"])
+            self.attention = True
         if self.context:
             self.optimizer_context_models = optim.Adam(context_models, lr=args["context_lr"])
 
@@ -170,30 +180,28 @@ class MetaLearnerRegression(nn.Module):
         learn_counter = 0
         context_counter = 0
 
-        for (name, p) in self.net.named_parameters():
-            if "meta" in name or "neuro" in name or "context_models" in name or "backbone" in name:
-                pass
-            else:
-                if p.learn:
-                    g = grad[learn_counter]
-                    if self.context:
-                        g = g * list_of_context[context_counter].view(g.shape)
-                        context_counter += 1
-                    if self.plasticity:
-                        mask = self.net.meta_plasticity[learn_counter]
-                        if self.sigmoid:
-                            temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
-                        else:
-                            temp_weight = p - self.update_lr * g * mask
-                    else:
+        for p in self.net.parameters():
 
-                        temp_weight = p - self.update_lr * g
-                    learn_counter += 1
-                    temp_weight.learn = True
+            if p.learn:
+                g = grad[learn_counter]
+                if self.context:
+                    g = g * list_of_context[context_counter].view(g.shape)
+                    context_counter += 1
+                if self.plasticity:
+                    mask = self.net.meta_plasticity[learn_counter]
+                    if self.sigmoid:
+                        temp_weight = p - self.update_lr * g * torch.sigmoid(mask)
+                    else:
+                        temp_weight = p - self.update_lr * g * mask
                 else:
-                    temp_weight = p
-                    temp_weight.learn = False
-                fast_weights.append(temp_weight)
+
+                    temp_weight = p - self.update_lr * g
+                learn_counter += 1
+                temp_weight.learn = True
+            else:
+                temp_weight = p
+                temp_weight.learn = False
+            fast_weights.append(temp_weight)
 
         with torch.no_grad():
             prediction = self.net(x_rand[0], vars=None, bn_training=False)
@@ -283,10 +291,12 @@ class MetaLearnerRegression(nn.Module):
         if len(self.remaining_meta_weights) > 0:
             self.optimizer.step()
         if self.plasticity:
-            assert(False)
             self.optimizer_plastic.step()
         if self.neuro:
             self.optimizer_neuromodulation.step()
+        if self.attention:
+            # logger.info("Updating attention")
+            self.optimizer_attention.step()
         if self.context:
             # print("Changing context")
             self.optimizer_context_models.step()

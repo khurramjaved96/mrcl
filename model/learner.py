@@ -7,11 +7,10 @@ import logging
 import torch
 from torch import nn
 from torch.nn import functional as F
+import model.initialize_layers as layer_init
 
 logger = logging.getLogger("experiment")
 
-
-#
 
 class Learner(nn.Module):
     """
@@ -34,22 +33,19 @@ class Learner(nn.Module):
         self.plasticity_config = []
         self.neuromodulation_config = []
 
-        # this dict contains all tensors needed to be optimized
         self.vars = nn.ParameterList()
         self.meta_plasticity = nn.ParameterList()
         self.context_models = nn.ParameterList()
         self.neuromodulation = nn.ParameterList()
-        # self.meta_vars = nn.ParameterList()
+
         self.modulate = False
-        # running_mean and running_var
         self.vars_bn = nn.ParameterList()
         self.plasticity_backbone = nn.ParameterList()
         self.neuromodulation_backbone = nn.ParameterList()
-        self.context_backbone_width = 11
-        self.neuromodulation_backbone_width = 11
+        self.context_backbone_width = 51
+        self.neuromodulation_backbone_width = 51
         self.attention = nn.ParameterList()
-        # self.meta_vars_bn = nn.ParameterList()
-        store_meta = False
+        self.attention_span = 16
 
         for i, (name, adaptation, meta_param, param) in enumerate(self.config):
 
@@ -81,99 +77,110 @@ class Learner(nn.Module):
                     self.neuromodulation_backbone_width = param[0]
 
             elif name is 'conv2d':
-                # [ch_out, ch_in, kernelsz, kernelsz]
                 w = nn.Parameter(torch.ones(*param[:4]))
-                # gain=1 according to cbfin's implementation
                 torch.nn.init.kaiming_normal_(w)
                 w.learn = adaptation
                 self.vars.append(w)
-                # [ch_out]
                 b = nn.Parameter(torch.zeros(param[0]))
                 b.learn = adaptation
                 self.vars.append(b)
 
             elif name is 'convt2d':
-                # [ch_in, ch_out, kernelsz, kernelsz, stride, padding]
                 w = nn.Parameter(torch.ones(*param[:4]))
                 w.learn = adaptation
-                # gain=1 according to cbfin's implementation
 
                 torch.nn.init.kaiming_normal_(w)
                 self.vars.append(w)
-                # [ch_in, ch_out]
                 self.vars.append(nn.Parameter(torch.zeros(param[1])))
 
             elif name is 'attention':
 
-                w = nn.Parameter(torch.ones(*param))
+                w_values, w_values_bias, w_keys, w_keys_bias = layer_init.initialize_attention(param[0], param[1],
+                                                                                               self.neuromodulation_backbone_width,
+                                                                                               self.attention_span,
+                                                                                               adaptation, meta_param)
+
+                self.vars.append(w_values)
+                self.vars.append(w_values_bias)
+
+                self.attention.append(w_keys)
+                self.attention.append(w_keys_bias)
+
+                if adaptation:
+                    w_context_plasticity, b_context_plasticity = layer_init.initialize_context_plasticity(
+                        param[0] * param[1] * self.attention_span, self.context_backbone_width)
+
+                    self.context_models.append(w_context_plasticity)
+                    self.context_models.append(b_context_plasticity)
+
+                    w_context_plasticity_bias, b_context_plasticity_bias = layer_init.initialize_context_plasticity(
+                        param[0] * self.attention_span, self.context_backbone_width)
+
+                    self.context_models.append(w_context_plasticity_bias)
+                    self.context_models.append(b_context_plasticity_bias)
+
+                    w, b = layer_init.initialize_plasticity(param[0] * self.attention_span, param[1])
+
+                    self.meta_plasticity.append(w)
+                    self.meta_plasticity.append(b)
+
+            elif name == "positional-attention":
+                w_values, w_values_bias, w_query, w_query_bias = layer_init.initialize_positional_attention(param[0],
+                                                                                                            param[1],
+                                                                                                            self.neuromodulation_backbone_width,
+                                                                                                            self.attention_span,
+                                                                                                            adaptation,
+                                                                                                            meta_param)
+                #
+                self.vars.append(w_values)
+                self.vars.append(w_values_bias)
+
+                self.attention.append(w_query)
+                self.attention.append(w_query_bias)
+                #
+                if adaptation:
+                    w_context_plasticity, b_context_plasticity = layer_init.initialize_context_plasticity(
+                        param[0] * param[1] * self.attention_span, self.context_backbone_width)
+
+                    self.context_models.append(w_context_plasticity)
+                    self.context_models.append(b_context_plasticity)
+
+                    w_context_plasticity_bias, b_context_plasticity_bias = layer_init.initialize_context_plasticity(
+                        param[0] * self.attention_span, self.context_backbone_width)
+
+                    self.context_models.append(w_context_plasticity_bias)
+                    self.context_models.append(b_context_plasticity_bias)
+
+                    w, b = layer_init.initialize_plasticity(param[0] * self.attention_span, param[1])
+
+                    self.meta_plasticity.append(w)
+                    self.meta_plasticity.append(b)
+
             elif name is 'linear':
 
-                # [ch_out, ch_in]
-                w = nn.Parameter(torch.ones(*param))
-                w.learn = adaptation
-                w.meta = meta_param
-                torch.nn.init.kaiming_normal_(w)
-                b = nn.Parameter(torch.zeros(param[0]))
-                b.learn = adaptation
-                b.meta = meta_param
+                w, b = layer_init.initialize_linear(param[0], param[1], adaptation, meta_param)
 
                 self.vars.append(w)
                 self.vars.append(b)
 
-                w_mod = nn.Parameter(torch.ones(param[0] * param[1], self.neuromodulation_backbone_width))
-                w_mod.learn = False
-                torch.nn.init.kaiming_normal_(w_mod)
-                b_mod = nn.Parameter(torch.zeros(param[0] * param[1]))
-                b_mod.learn = False
-                w_mod.meta = True
-                b_mod.meta = True
-
-                self.neuromodulation.append(w_mod)
-                self.neuromodulation.append(b_mod)
-
-                w_mod = nn.Parameter(torch.ones(param[0], self.neuromodulation_backbone_width))
-                w_mod.learn = False
-                torch.nn.init.kaiming_normal_(w_mod)
-                b_mod = nn.Parameter(torch.zeros(param[0]))
-                b_mod.learn = False
-                w_mod.meta = True
-                b_mod.meta = True
-
-                self.neuromodulation.append(w_mod)
-                self.neuromodulation.append(b_mod)
-
-                w_context_plasticity = nn.Parameter(torch.ones(param[0] * param[1], self.context_backbone_width))
-                w_context_plasticity.learn = False
-                torch.nn.init.kaiming_normal_(w_context_plasticity)
-                b_context_plasticity = nn.Parameter(torch.zeros(param[0] * param[1]))
-                b_context_plasticity.learn = False
-                w_context_plasticity.meta = True
-                b_context_plasticity.meta = True
-                #
-                self.context_models.append(w_context_plasticity)
-                self.context_models.append(b_context_plasticity)
-
-                w_context_plasticity_bias = nn.Parameter(torch.ones(param[0], self.context_backbone_width))
-                w_context_plasticity_bias.learn = False
-                torch.nn.init.kaiming_normal_(w_context_plasticity_bias)
-                b_context_plasticity_bias = nn.Parameter(torch.zeros(param[0]))
-                b_context_plasticity_bias.learn = False
-                w_context_plasticity_bias.meta = True
-                b_context_plasticity_bias.meta = True
-                #
-                self.context_models.append(w_context_plasticity_bias)
-                self.context_models.append(b_context_plasticity_bias)
-
                 if adaptation:
-                    w = nn.Parameter(torch.zeros(*param))
-                    self.meta_plasticity.append(w)
-                    b = nn.Parameter(torch.zeros(param[0]))
-                    self.meta_plasticity.append(b)
-                    w.learn = False
-                    b.learn = False
-                    w.meta = True
-                    b.meta = True
+                    w_context_plasticity, b_context_plasticity = layer_init.initialize_context_plasticity(
+                        param[0] * param[1],
+                        self.context_backbone_width)
 
+                    self.context_models.append(w_context_plasticity)
+                    self.context_models.append(b_context_plasticity)
+
+                    w_context_plasticity_bias, b_context_plasticity_bias = layer_init.initialize_context_plasticity(
+                        param[0],
+                        self.context_backbone_width)
+
+                    self.context_models.append(w_context_plasticity_bias)
+                    self.context_models.append(b_context_plasticity_bias)
+
+                    w, b = layer_init.initialize_plasticity(param[0], param[1])
+                    self.meta_plasticity.append(w)
+                    self.meta_plasticity.append(b)
 
 
             elif name is 'cat':
@@ -188,11 +195,10 @@ class Learner(nn.Module):
             elif name is "modulate":
                 self.modulate = True
             elif name is 'bn':
-                # [ch_out]
+
                 w = nn.Parameter(torch.ones(param[0]))
                 w.learn = adaptation
                 self.vars.append(w)
-                # [ch_out]
                 b = nn.Parameter(torch.zeros(param[0]))
                 b.learn = adaptation
                 self.vars.append(b)
@@ -207,6 +213,7 @@ class Learner(nn.Module):
                           'flatten', 'reshape', 'leakyrelu', 'sigmoid']:
                 continue
             else:
+                print(name)
                 raise NotImplementedError
 
         temp_config = []
@@ -268,6 +275,13 @@ class Learner(nn.Module):
             elif name is "modulate":
                 tmp = 'modulate'
                 info += tmp + "\n"
+            elif name is "attention":
+                tmp = "attention"
+                info += tmp + "\n"
+
+            elif name is "positional-attention":
+                tmp = "positional-attention"
+                info += tmp + "\n"
 
             elif name is 'avg_pool2d':
                 tmp = 'avg_pool2d:(k:%d, stride:%d, padding:%d)' % (param[0], param[1], param[2])
@@ -324,7 +338,7 @@ class Learner(nn.Module):
         list_of_activations = []
         for name, meta, meta_param, param in self.config:
 
-            if name == 'linear':
+            if name == "attention":
                 w, b = vars[idx], vars[idx + 1]
                 gating = F.linear(plasticity_embedding, w, b)
                 list_of_activations.append(torch.mean(F.relu(gating), 0))
@@ -342,6 +356,46 @@ class Learner(nn.Module):
                                  str(list_of_activations[-1].shape))
                     logger.debug("Linear transformation weights shape %s %s", str(w_bias.shape), str(b_bias.shape))
 
+                idx += 4
+
+            if name == "positional-attention":
+                w, b = vars[idx], vars[idx + 1]
+                gating = F.linear(plasticity_embedding, w, b)
+                list_of_activations.append(torch.mean(F.relu(gating), 0))
+
+                w_bias, b_bias = vars[idx + 2], vars[idx + 3]
+                gating_bias = F.linear(plasticity_embedding, w_bias, b_bias)
+                list_of_activations.append(torch.mean(F.relu(gating_bias), 0))
+                #
+                if log:
+                    logger.debug("Linear transformation of embedding to get shape %s",
+                                 str(list_of_activations[-2].shape))
+                    logger.debug("Linear transformation weights shape %s %s", str(w.shape), str(b.shape))
+
+                    logger.debug("Linear transformation of embedding to get shape %s",
+                                 str(list_of_activations[-1].shape))
+                    logger.debug("Linear transformation weights shape %s %s", str(w_bias.shape), str(b_bias.shape))
+
+                idx += 4
+
+            if name == 'linear':
+                w, b = vars[idx], vars[idx + 1]
+                gating = F.linear(plasticity_embedding, w, b)
+                list_of_activations.append(torch.mean(F.relu(gating), 0))
+
+                w_bias, b_bias = vars[idx + 2], vars[idx + 3]
+                gating_bias = F.linear(plasticity_embedding, w_bias, b_bias)
+                list_of_activations.append(torch.mean(F.relu(gating_bias), 0))
+                #
+                if log:
+                    logger.debug("Linear transformation of embedding to get shape %s",
+                                 str(list_of_activations[-2].shape))
+                    logger.debug("Linear transformation weights shape %s %s", str(w.shape), str(b.shape))
+
+                    logger.debug("Linear transformation of embedding to get shape %s",
+                                 str(list_of_activations[-1].shape))
+                    logger.debug("Linear transformation weights shape %s %s", str(w_bias.shape), str(b_bias.shape))
+                #
                 idx += 4
         if log:
             logger.debug("\n")
@@ -369,10 +423,11 @@ class Learner(nn.Module):
 
         neuro_mod = self.neuromodulation
 
-        x_input = torch.mean(x, dim=0, keepdim=True)
+        x_attention = x
+        # x_input = torch.mean(x, dim=0, keepdim=True)
         idx_neuro = 0
-        if log:
-            logger.debug("\nNeuromodulation embedding = x with shape %s", str(x_input.shape))
+        # if log:
+        #     logger.debug("\nNeuromodulation embedding = x with shape %s", str(x_input.shape))
 
         self.neuromodulation_config = []
         for name, meta, meta_param, param in self.neuromodulation_config:
@@ -398,8 +453,9 @@ class Learner(nn.Module):
         idx = 0
         mod_id = 0
         bn_idx = 0
+        key_id = 0
         #
-
+        x_key = x
         for layer_counter, (name, meta, meta_param, param) in enumerate(self.config):
 
             if name == 'conv2d':
@@ -423,7 +479,7 @@ class Learner(nn.Module):
                 # If equal, then last layer
                 if layer_counter != (len(self.config) - 1):
                     if self.config[layer_counter + 1][0] is "modulate":
-                        w_w, b_w = self.neuromodulation[idx_neuro], self.neuromodulation[idx_neuro+1]
+                        w_w, b_w = self.neuromodulation[idx_neuro], self.neuromodulation[idx_neuro + 1]
                         w_b, b_b = self.neuromodulation[idx_neuro + 2], self.neuromodulation[idx_neuro + 3]
                         weight_mask = F.relu(F.linear(x_input, w_w, b_w))
                         bias_mask = F.relu(F.linear(x_input, w_b, b_b))
@@ -435,17 +491,105 @@ class Learner(nn.Module):
                             logger.debug("Bias mask = %s", str(bias_mask.shape))
                             logger.debug("Applying weight and base mask for modulation")
                             logger.debug("Weight shape = %s", str(w.shape))
-                        w = w*weight_mask
-                        b = b*bias_mask
+                        w = w * weight_mask
+                        b = b * bias_mask
                         idx_neuro += 4
-
 
                 x = F.linear(x, w, b)
                 if log:
                     logger.debug("Applying linear transformation to get shape %s", str(x.shape))
                     logger.debug("Weights used %s %s", str(w.shape), str(b.shape))
                 idx += 2
-            #
+
+            elif name == "attention":
+                #
+                w, b = vars[idx], vars[idx + 1]
+                # print(x.shape, w.shape, b.shape)
+                values = F.linear(x, w, b).view(x.shape[0], -1, self.attention_span)
+
+                query = x_attention.view(x.shape[0], 11, 1).expand(-1, -1, 10)
+
+                w_key, b_key = self.attention[key_id], self.attention[key_id + 1]
+                #
+                # print(b_key)
+                keys = F.linear(x, w_key, b_key).view(x.shape[0], 11, self.attention_span)
+                #
+                # print(query.shape, keys.shape)
+                query_key = F.cosine_similarity(query, keys, dim=1).unsqueeze(1)
+                # print(query_key.shape)
+                # print(query_key[0, :])
+                # query_key = torch.div(torch.matmul(query, keys), 3.31)
+                # query_key = torch.matmul(query, keys)
+                #
+                # print(query_key)
+                softmax_key = torch.softmax(query_key, dim=2)
+                # print(softmax_key[0, :])
+                # if key_id == 0:
+                #     print(name)
+                #     for a in softmax_key:
+                #         print(a)
+                #         break
+                #     print(softmax_key.shape)
+                # print(softmax_key)
+
+                #
+                #
+                # x_attention_temp = x_attention[:, 0:10].unsqueeze(1)
+                # print(x_attention_temp.shape, values.shape)
+                values_softened = values * softmax_key
+                keys = keys * softmax_key
+
+                x_key = torch.sum(keys, 2)
+
+                # values_softened = values * x_attention_temp
+                # #
+                values_softened = torch.sum(values_softened, 2)
+                # values_softened = torch.mean(values, 2)
+                #
+                #
+                if log:
+                    logger.debug("Keys shape = %s", str(keys.shape))
+                    logger.debug("Query shape = %s", str(query.shape))
+                    logger.debug("Query key shape = %s", str(query_key.shape))
+                    logger.debug("Values shape = %s", str(values.shape))
+                    logger.debug("Softmax shape = %s", str(softmax_key.shape))
+                    logger.debug("Final shape = %s", str(values_softened.shape))
+
+                # values_softened = values[:, :, 0].squeeze()
+
+                x = values_softened
+                key_id += 2
+                idx += 2
+
+            elif name == "positional-attention":
+                #
+                w, b = vars[idx], vars[idx + 1]
+                values = F.linear(x, w, b).view(x.shape[0], -1, self.attention_span)
+
+                query = x_attention
+                w_key, b_key = self.attention[key_id], self.attention[key_id + 1]
+
+                keys = F.linear(query, w_key, b_key).unsqueeze(1)
+
+                softmax_key = torch.softmax(keys, dim=2)
+                # print(softmax_key.shape, values.shape)
+                values_softened = values * softmax_key
+
+                values_softened = torch.sum(values_softened, 2)
+
+                if log:
+                    logger.debug("Keys shape = %s", str(keys.shape))
+                    logger.debug("Query shape = %s", str(query.shape))
+                    logger.debug("Values shape = %s", str(values.shape))
+                    logger.debug("Softmax shape = %s", str(softmax_key.shape))
+                    logger.debug("Final shape = %s", str(values_softened.shape))
+
+                x = values_softened
+                key_id += 2
+                idx += 2
+
+
+
             elif name == 'rep':
                 # quit()
                 # print(x.shape)
@@ -522,6 +666,7 @@ class Learner(nn.Module):
             logger.info("Neuromodulation Backbone = %s", name)
         for i, (name, adaptation, meta_param, param) in enumerate(self.plasticity_config):
             logger.info("Context backbone = %s", name)
+
     #
     def zero_grad(self, vars=None):
         """

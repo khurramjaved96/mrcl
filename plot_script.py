@@ -28,11 +28,11 @@ for experiment_name in os.listdir(results_dir):
                                 print(experiment_name)
                                 if experiment_name in data:
 
-                                    data[experiment_name].append(data_temp['results']['Meta loss'][0:40000])
+                                    data[experiment_name].append(data_temp['results']['Meta loss'][0:100000])
                                 else:
                                     folders.append(experiment_name + rank)
                                     data[experiment_name] = []
-                                    data[experiment_name].append(data_temp['results']['Meta loss'][0:40000])
+                                    data[experiment_name].append(data_temp['results']['Meta loss'][0:100000])
                             except:
                                 pass
                     # print(data)e
@@ -93,5 +93,5 @@ for current_experimnet_data in data:
     #     # plt.errorbar(list(results_dict[folder].keys()), list(results_dict[folder].values()), yerr= list(std_dict[folder].values()) , marker='s')
 
 plt.tight_layout()
-plt.savefig("plots/meta_smooth_all.pdf", format="pdf")
+plt.savefig("plots/meta_smooth_all_attention_sd_early.pdf", format="pdf")
 quit()

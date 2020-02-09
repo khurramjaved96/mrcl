@@ -159,6 +159,7 @@ def main():
 
                         running_meta_loss = running_meta_loss * 0.97 + 0.03 * meta_loss[-1].detach().cpu()
                         running_meta_loss_fixed = running_meta_loss / (1 - (0.97 ** (meta_steps_counter)))
+                        # logger.info("Meta loss %s", str(running_meta_loss_fixed.item()))
                         writer.add_scalar('/metatrain/train/accuracy', meta_loss[-1].detach().cpu(), meta_steps_counter)
                         writer.add_scalar('/metatrain/train/runningaccuracy', running_meta_loss_fixed,
                                           meta_steps_counter)
