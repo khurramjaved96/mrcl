@@ -2,7 +2,7 @@ import os
 
 import seaborn as sns
 
-results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Slack2"
+results_dir = "/Volumes/Macintosh HD/Users/khurramjaved96/Results_ICML/Yoshua_Plot"
 results_dict = {}
 std_dict = {}
 import pandas as pd
@@ -53,10 +53,10 @@ for current_experimnet_data in data:
         running_val = run[0]
         for val in run:
             run_temp.append(running_val)
-            running_val = 0.90 * running_val + 0.10 * val
+            running_val = 0.95 * running_val + 0.05 * val
 
         temp_data = []
-        for counter_temp in range(0, len(run_temp), 20):
+        for counter_temp in range(0, len(run_temp), 200):
             temp_data.append(counter_temp)
         print("X = ", len(temp_data))
         dictionary_temp["x"] = dictionary_temp["x"] + temp_data
@@ -64,7 +64,7 @@ for current_experimnet_data in data:
         run_temp = list(np.log10(run_temp))
         # print(run_temp)
         temp_data_2 = []
-        for counter_temp in range(0, len(run_temp), 20):
+        for counter_temp in range(0, len(run_temp), 200):
             temp_data_2.append(run_temp[counter_temp])
         run_temp =temp_data_2
         print("Y = ", len(run_temp))
@@ -86,12 +86,12 @@ for current_experimnet_data in data:
     # fig, ax = plt.subplots()
 
     # ax.set(yscale="log")
-    sns.lineplot(x='x', y='y', data=df, legend='full', label=folders[counter], ci="sd")
+    sns.lineplot(x='x', y='y', data=df, legend='full', label=folders[counter])
     counter += 1
     #
 
     #     # plt.errorbar(list(results_dict[folder].keys()), list(results_dict[folder].values()), yerr= list(std_dict[folder].values()) , marker='s')
 
 plt.tight_layout()
-plt.savefig("plots/meta_smooth_all_attention_sd_early.pdf", format="pdf")
+plt.savefig("plots/meta_loss_update_bootstrap_2.pdf", format="pdf")
 quit()

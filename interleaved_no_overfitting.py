@@ -61,15 +61,15 @@ def main():
 
     replay_buffer = utils.replay_buffer(30)
     metalearner = MetaLearnerRegression(args, config).to(device)
-
-    if args['model_path'] is not None:
-        metalearner.net = torch.load(args['model_path'] + "/net.model",
-                                     map_location="cpu").to(device)
-
-        for (name, param) in metalearner.net.named_parameters():
-            if name in layers_learn:
-                param.learn = layers_learn[name]
-                print(name, layers_learn[name])
+    #
+    # if args['model_path'] is not None:
+    #     # metalearner.net = torch.load(args['model_path'] + "/net.model",
+    #     #                              map_location="cpu").to(device)
+    #
+    #     for (name, param) in metalearner.net.named_parameters():
+    #         if name in layers_learn:
+    #             param.learn = layers_learn[name]
+    #             print(name, layers_learn[name])
 
     tmp = filter(lambda x: x.requires_grad, metalearner.parameters())
     num = sum(map(lambda x: np.prod(x.shape), tmp))

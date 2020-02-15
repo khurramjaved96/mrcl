@@ -213,6 +213,177 @@ class ModelFactory():
                     ('linear', True, True, [num_actions, hidden_size]),
 
                 ]
+            #
+            if model_type == "multihead":
+                h = 2
+                value_dimension = 5
+                total_values = 25
+                attention_span = 4
+                query_dimension = 15
+                init_query_dimension = in_channels
+                return [
+                    ('multihead', True, True,
+                     [in_channels, h, query_dimension, value_dimension, total_values, attention_span,
+                      init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [num_actions, value_dimension * total_values * h]),
+                ]
+
+            if model_type == "multihead-mrcl":
+                h = 2
+                value_dimension = 5
+                total_values = 25
+                attention_span = 4
+                query_dimension = 15
+                init_query_dimension = in_channels
+                return [
+                    ('multihead', False, True,
+                     [in_channels, h, query_dimension, value_dimension, total_values, attention_span,
+                      init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', False, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', False, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', False, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', False, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead', False, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+
+                    ('multihead', False, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True,
+                     [value_dimension * total_values * h, value_dimension * total_values * h]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [num_actions, value_dimension * total_values * h]),
+                ]
+
+            if model_type == "multihead-3":
+                h = 2
+                value_dimension = 5
+                total_values = 25
+                attention_span = 4
+                query_dimension = 15
+                init_query_dimension = in_channels
+                return [
+                    ('multihead-3', True, True,
+                     [in_channels, h, query_dimension, value_dimension, total_values, attention_span,
+                      init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead-3', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead-3', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead-3', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead-3', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead-3', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+
+                    ('multihead-3', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('multihead-3', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [num_actions, value_dimension * total_values * h]),
+                ]
+
+            if model_type == "multihead-2":
+                h = 2
+                value_dimension = 5
+                total_values = 25
+                attention_span = 4
+                query_dimension = 15
+                init_query_dimension = in_channels
+                return [
+                    ('linear', True, True,
+                     [value_dimension * total_values * h, in_channels]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True,
+                     [value_dimension * total_values * h, value_dimension * total_values * h]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True,
+                     [value_dimension * total_values * h, value_dimension * total_values * h]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+
+                    ('linear', True, True,
+                     [value_dimension * total_values * h, value_dimension * total_values * h]),
+                    ('relu', True, True, [True]),
+                    ('multihead', True, True,
+                     [value_dimension * total_values * h, h, query_dimension, value_dimension, total_values,
+                      attention_span, init_query_dimension]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [num_actions, value_dimension * total_values * h]),
+                ]
 
             if model_type == "maml-attention":
                 hidden_size = int(width / 4)
@@ -240,6 +411,37 @@ class ModelFactory():
                     ('relu', True, True, [True]),
 
                     ('positional-attention', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+                    ('linear', True, True, [num_actions, hidden_size]),
+                    #
+                ]
+
+            if model_type == "maml-attention-2":
+                hidden_size = int(width / 4)
+                return [
+                    #
+                    ('individual-attention', True, True, [hidden_size, in_channels]),
+                    ('relu', True, True, [True]),
+
+                    ('individual-attention', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+
+                    ('individual-attention', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+
+                    ('individual-attention', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+
+                    ('individual-attention', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+
+                    ('individual-attention', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+
+                    ('individual-attention', True, True, [hidden_size, hidden_size]),
+                    ('relu', True, True, [True]),
+
+                    ('individual-attention', True, True, [hidden_size, hidden_size]),
                     ('relu', True, True, [True]),
                     ('linear', True, True, [num_actions, hidden_size]),
                     #
@@ -403,26 +605,29 @@ class ModelFactory():
             channels = 128
             # channels = 256
             return [
-                ('conv2d', [int(channels / 8), 1, 3, 3, 2, 0]),
-                ('relu', [True]),
-                # ('gate', [True]),
-                ('bn', [16]),
-                ('conv2d', [int(channels / 4), int(channels / 8), 3, 3, 1, 0]),
-                ('relu', [True]),
-                # ('gate', [True]),
-                ('bn', [32]),
-                ('conv2d', [int(channels / 2), int(channels / 4), 3, 3, 2, 0]),
-                ('relu', [True]),
-                # ('gate', [True]),
-                ('bn', [64]),
-                ('flatten', []),
-                ('rep', []),
-                ('gate', [True]),
-                ('linear', [1024, 18 * channels]),
-                ('relu', [True]),
-                # ('gate', [True]),
+                ('conv2d', True, True,  [channels, 1, 3, 3, 2, 0]),
+                ('relu', True, True, [True]),
+                # ('bn', [64]),
+                ('conv2d', True, True, [channels, channels, 3, 3, 1, 0]),
+                ('relu', True, True, [True]),
 
-                ('linear', [1000, 1024])
+                ('conv2d', True, True,[channels, channels, 3, 3, 2, 0]),
+                ('relu', True, True, [True]),
+
+                ('conv2d', True, True, [channels, channels, 3, 3, 1, 0]),
+                ('relu', True, True, [True]),
+                # ('bn', [128]),
+                ('conv2d',True, True, [channels, channels, 3, 3, 2, 0]),
+                ('relu', True, True, [True]),
+                # ('bn', [256]),
+                ('conv2d', True, True, [channels, channels, 3, 3, 2, 0]),
+                ('relu', True, True, [True]),
+                # ('bn', [512]),
+                ('flatten', True, True, []),
+
+                ('linear', True, True, [512, 9 * channels]),
+                ('relu', True, True, [True]),
+                ('linear', True, True, [1000, 512])
             ]
 
 
