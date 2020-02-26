@@ -49,7 +49,7 @@ def main():
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args["capacity"] + 1)
 
-    config = mf.ModelFactory.get_model(args["model"], "Sin", in_channels=args["capacity"] + 1, num_actions=1,
+    config = mf.ModelFactory.get_model(args["model"], "Sin", input_dimension=args["capacity"] + 1, output_dimension=1,
                                        width=args["width"])
 
     gpu_to_use = rank % args["gpus"]

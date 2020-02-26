@@ -70,7 +70,7 @@ def main():
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args["capacity"] + 1)
 
-    config = mf.ModelFactory.get_model(args["model"], "Sin", in_channels=args["capacity"] + 1, num_actions=1,
+    config = mf.ModelFactory.get_model(args["model"], "Sin", input_dimension=args["capacity"] + 1, output_dimension=1,
                                        width=args["width"])
 
     if torch.cuda.is_available():
@@ -142,9 +142,9 @@ def main():
 
         accs = metalearner(x_traj, y_traj, x_rand, y_rand)
 
-        metalearner.meta_optim.step()
+        metalearner.meta_optim.optimizer_step()
         if not args["no_plasticity"]:
-            metalearner.meta_optim_plastic.step()
+            metalearner.meta_optim_plastic.optimizer_step()
         # if not args["no_neuro"]:
         #     metalearner.meta
 

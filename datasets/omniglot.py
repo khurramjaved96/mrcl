@@ -83,9 +83,20 @@ class Omniglot(data.Dataset):
             self.data = self.data2
 
         print("Total classes = ", np.max(self.targets))
-
+        self.load_data()
     def __len__(self):
         return len(self.data)
+
+    def load_data(self):
+        self.images_data = []
+        for index in range(0, len(self.data)):
+            image_name = self.data[index]
+            character_class = self.targets[index]
+            image_path = join(self.target_folder, self._characters[character_class], image_name)
+            image = Image.open(image_path, mode='r').convert('L')
+            if self.transform:
+                image = self.transform(image)
+            self.images_data.append(image)
 
     def __getitem__(self, index):
         """

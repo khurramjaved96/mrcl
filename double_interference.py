@@ -44,7 +44,7 @@ def main():
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args["capacity"] + 1)
 
-    config = mf.ModelFactory.get_model(args["model"], "Sin", in_channels=args["capacity"] + 1, num_actions=1,
+    config = mf.ModelFactory.get_model(args["model"], "Sin", input_dimension=args["capacity"] + 1, output_dimension=1,
                                        width=args["width"])
 
     gpu_to_use = rank % args["gpus"]
@@ -168,9 +168,9 @@ def main():
                 meta_loss = metalearner(x_traj, y_traj, x_rand, y_rand)
                 loss_history.append(meta_loss[-1].detach().cpu().item())
                 if metalearner.meta_optim is not None:
-                    metalearner.meta_optim.step()
+                    metalearner.meta_optim.optimizer_step()
                 if not args["no_plasticity"]:
-                    metalearner.meta_optim_plastic.step()
+                    metalearner.meta_optim_plastic.optimizer_step()
                 # if not args["no_neuro"]:
                 #     metalearner.meta
                 #

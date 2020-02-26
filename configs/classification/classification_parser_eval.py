@@ -6,10 +6,10 @@ class Parser(configargparse.ArgParser):
         super().__init__()
         self.add('-c', '--my-config', is_config_file=True, default="configs/regression/empty.ini",
                  help='config file path')
-
-        self.add('--epoch', type=int, help='epoch number', default=200000)
-        self.add('--tasks', type=int, help='meta batch size, namely task num', default=10)
-        self.add('--capacity', type=int, help='meta batch size, namely task num', default=50)
+        #
+        self.add('--epoch', type=int, help='epoch number', default=1)
+        self.add('--tasks', type=int, help='meta batch size, namely task num', default=4)
+        self.add('--capacity', type=int, help='meta batch size, namely task num', default=100)
         self.add('--meta_lr', type=float, nargs='+', help='meta-level outer learning rate', default=[1e-4])
         self.add('--gpus', type=int, help='meta-level outer learning rate', default=1)
         self.add('--plasticity_lr', nargs='+', type=float, help='meta-level outer learning rate',
@@ -41,4 +41,14 @@ class Parser(configargparse.ArgParser):
         self.add("--width", type=int, default=400)
         self.add('--dataset', help='Name of experiment', default="omniglot")
         self.add('--path', help='Path of the dataset', default="../")
+
+        self.add('--schedule', type=int, nargs='+', default=[10, 50, 75, 100, 150, 200],
+                               help='Decrease learning rate at these epochs.')
+
+        self.add('--memory', type=int, help='epoch number', default=0)
+        self.add('--scratch', action='store_true', default=False)
+        self.add('--reset', action="store_true")
+        self.add('--test', action="store_true")
+        self.add("--iid", action="store_true")
+        self.add("--runs", type=int, default=5)
 

@@ -55,9 +55,9 @@ def train(sample, policy_net, target_net, optimizer):
     loss = f.smooth_l1_loss(target.to(device), Q_s_a)
 
     # Zero gradients, backprop, update the weights of policy_net
-    optimizer.zero_grad()
+    optimizer.optimizer_zero_grad()
     loss.backward()
-    optimizer.step()
+    optimizer.optimizer_step()
 
 
 #     Do the meta learning update now

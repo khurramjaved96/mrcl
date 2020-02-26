@@ -12,7 +12,7 @@ class DatasetFactory:
 
         if name == "omniglot":
             train_transform = transforms.Compose(
-                [transforms.Resize((32, 32)),
+                [transforms.Resize((84, 84)),
                  transforms.ToTensor()])
             if path is None:
                 return om.Omniglot("../data/omni", background=background, download=True, train=train,

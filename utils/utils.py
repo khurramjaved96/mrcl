@@ -428,7 +428,7 @@ def construct_set(iterators, sampler, steps, shuffle=True):
         x, y = sampler.sample_batch(it1, id_mapped, 32)
         x_rand.append(x)
         y_rand.append(y)
-
+    #
     x_rand = torch.stack([torch.cat(x_rand)])
     y_rand = torch.stack([torch.cat(y_rand)])
 

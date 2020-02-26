@@ -24,18 +24,12 @@ def main():
 
     args = utils.get_run(vars(p.parse_known_args()[0]), rank)
 
-    if args['model_path'] is not None:
-        # args_old = args
-        args_temp_temp, layers_learn = utils.load_run(args['model_path'])
-        # args["no_meta"] = args_old["no_meta"]
-        # args["model_path"] = args_old["model_path"]
-        # args["name"] = args_old["name"]
-
     utils.set_seed(args["seed"])
 
     my_experiment = experiment(args["name"], args, "../results/", commit_changes=False,
                                rank=int(rank / total_seeds),
                                seed=total_seeds)
+
     my_experiment.results["all_args"] = all_args
 
     writer = SummaryWriter(my_experiment.path + "tensorboard")
@@ -49,8 +43,13 @@ def main():
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args["capacity"] + 1)
 
-    config = mf.ModelFactory.get_model(args["model"], "Sin", in_channels=args["capacity"] + 1, num_actions=1,
-                                       width=args["width"])
+    model_config = mf.ModelFactory.get_model(args["model"], "Sin", input_dimension=args["capacity"] + 1,
+                                             output_dimension=1,
+                                             width=args["width"])
+
+    context_backbone_config = mf.ModelFactory.get_model("context-backbone", "Sin", input_dimension=args["capacity"] + 1,
+                                                        output_dimension=args["context_dimension"],
+                                                        width=100)
 
     gpu_to_use = rank % args["gpus"]
     if torch.cuda.is_available():
@@ -60,16 +59,7 @@ def main():
         device = torch.device('cpu')
 
     replay_buffer = utils.replay_buffer(30)
-    metalearner = MetaLearnerRegression(args, config).to(device)
-    #
-    # if args['model_path'] is not None:
-    #     # metalearner.net = torch.load(args['model_path'] + "/net.model",
-    #     #                              map_location="cpu").to(device)
-    #
-    #     for (name, param) in metalearner.net.named_parameters():
-    #         if name in layers_learn:
-    #             param.learn = layers_learn[name]
-    #             print(name, layers_learn[name])
+    metalearner = MetaLearnerRegression(args, model_config, context_backbone_config).to(device)
 
     tmp = filter(lambda x: x.requires_grad, metalearner.parameters())
     num = sum(map(lambda x: np.prod(x.shape), tmp))
@@ -82,20 +72,15 @@ def main():
     adaptation_running_loss_history = []
     meta_steps_counter = 0
     LOG_INTERVAL = 1
-    for name, param in metalearner.named_parameters():
-        logger.info("Name = %s, learn = %s", name, str(param.learn))
 
-    # logger.warning("Using SIGMOID Context plasticity")
-    # logger.warning("Resseting model parameters")
-    # metalearner.net.reset_vars()
     for step in range(args["epoch"]):
         # logger.warning("ONLY 20 FUNCTIONS")
         if args["sanity"]:
-            logger.warning("Reloading model")
-            metalearner.load_model(args, config)
+            logger.debug("Reloading model")
+            metalearner.load_model(args, model_config)
             metalearner.net = metalearner.net.to(device)
         if step % LOG_INTERVAL == 0:
-            logger.warning("####\t STEP %d \t####", step)
+            logger.debug("####\t STEP %d \t####", step)
 
         adaptation_lr = args["update_lr"]
 
@@ -115,7 +100,7 @@ def main():
 
         for meta_counter, k in enumerate(range(len(x_traj))):
             if not args["no_adaptation"]:
-                logits = net(x_traj[k], vars=None, bn_training=False, log=bool(not (step + meta_counter)))
+                logits = net(x_traj[k], vars=None)
                 logits_select = []
                 for no, val in enumerate(y_traj[k, :, 1].long()):
                     logits_select.append(logits[no, val])
@@ -124,13 +109,14 @@ def main():
                 # if k < 10:
 
                 grad = metalearner.clip_grad(
-                    torch.autograd.grad(loss_temp, list(filter(lambda x: x.learn, list(net.parameters())))))
+                    torch.autograd.grad(loss_temp, net.get_adaptation_parameters()))
 
                 list_of_context = None
-                if metalearner.context:
-                    list_of_context = metalearner.net.forward_plasticity(x_traj[k], log=bool(not (step + meta_counter)))
+                if metalearner.context_plasticity:
+                    list_of_context = metalearner.net.forward_plasticity(x_traj[k])
 
-                metalearner.inner_update(net, grad, adaptation_lr, list_of_context, log=bool(not (step + meta_counter)))
+                updated_weights = metalearner.inner_update(net, net.vars, grad, adaptation_lr, list_of_context, log=bool(not (step + meta_counter)))
+                metalearner.net.update_weights(updated_weights)
 
             if not args["no_meta"]:
 
@@ -172,7 +158,7 @@ def main():
 
         if not args["no_adaptation"]:
             with torch.no_grad():
-                logits = net(x_rand[0], vars=None, bn_training=False)
+                logits = net(x_rand[0], vars=None)
                 # print("Logits = ", logits)
                 logits_select = []
                 for no, val in enumerate(y_rand[0, :, 1].long()):
@@ -199,7 +185,7 @@ def main():
                 torch.save(metalearner.net, my_experiment.path + "net.model")
             dict_names = {}
             for (name, param) in metalearner.net.named_parameters():
-                dict_names[name] = param.learn
+                dict_names[name] = param.adaptation
 
             dict_names_meta = {}
             # for (name, param) in metalearner.net.named_parameters():

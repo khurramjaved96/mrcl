@@ -14,6 +14,8 @@ from model.meta_learner import MetaLearnerRegression
 from utils import utils
 
 logger = logging.getLogger('experiment')
+
+
 #
 
 def construct_set(iterators, sampler, steps):
@@ -72,7 +74,7 @@ def main():
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args["capacity"] + 1)
 
-    config = mf.ModelFactory.get_model(args["model"], "Sin", in_channels=args["capacity"] + 1, num_actions=1,
+    config = mf.ModelFactory.get_model(args["model"], "Sin", input_dimension=args["capacity"] + 1, output_dimension=1,
                                        width=args["width"])
 
     if torch.cuda.is_available():
@@ -106,7 +108,6 @@ def main():
             x_traj, y_traj, x_rand, y_rand = x_traj.cuda(), y_traj.cuda(), x_rand.cuda(), y_rand.cuda()
 
         accs = metalearner(x_traj, y_traj, x_rand, y_rand)
-
 
         if step in [0, 2000, 3000, 4000]:
             for param_group in metalearner.optimizer.param_groups:

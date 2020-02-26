@@ -41,7 +41,7 @@ def main():
 
     sampler = ts.SamplerFactory.get_sampler("Sin", tasks, None, capacity=args["capacity"] + 1)
 
-    config = mf.ModelFactory.get_model(args["model"], "Sin", in_channels=args["capacity"] + 1, num_actions=1,
+    config = mf.ModelFactory.get_model(args["model"], "Sin", input_dimension=args["capacity"] + 1, output_dimension=1,
                                        width=args["width"])
 
     gpu_to_use = rank % args["gpus"]
@@ -96,7 +96,6 @@ def main():
             logits = torch.stack(logits_select).unsqueeze(1)
             loss_temp = F.mse_loss(logits, y_traj[k, :, 0].unsqueeze(1))
             # if k < 10:
-
 
             grad = metalearner.clip_grad(
                 torch.autograd.grad(loss_temp, list(filter(lambda x: x.learn, list(net.parameters())))))

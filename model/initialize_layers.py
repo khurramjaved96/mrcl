@@ -104,11 +104,10 @@ def initialize_individual_attention(param1, param2, query_span, attention_span, 
 
 def initialize_multihead(embedding_size, h, query_dimension, value_dimension, total_values, attention_span,
                          init_query_dimension, adaptation, meta):
-
     w_queries = nn.Parameter(torch.ones(query_dimension * h, init_query_dimension))
-    w_keys = nn.Parameter(torch.ones(query_dimension * total_values * attention_span , embedding_size))
-    w_values = nn.Parameter(torch.ones(value_dimension * total_values * attention_span , embedding_size))
-    w_values_bias = nn.Parameter(torch.zeros(value_dimension * total_values * attention_span ))
+    w_keys = nn.Parameter(torch.ones(query_dimension * total_values * attention_span, embedding_size))
+    w_values = nn.Parameter(torch.ones(value_dimension * total_values * attention_span, embedding_size))
+    w_values_bias = nn.Parameter(torch.zeros(value_dimension * total_values * attention_span))
 
     w_values.learn = adaptation
     w_values_bias.learn = adaptation
@@ -130,12 +129,11 @@ def initialize_multihead(embedding_size, h, query_dimension, value_dimension, to
 
 
 def initialize_multihead_3(embedding_size, h, query_dimension, value_dimension, total_values, attention_span,
-                         init_query_dimension, adaptation, meta):
-
+                           init_query_dimension, adaptation, meta):
     w_queries = nn.Parameter(torch.ones(query_dimension * h, init_query_dimension))
-    w_keys = nn.Parameter(torch.ones(query_dimension * total_values * attention_span , embedding_size))
-    w_values = nn.Parameter(torch.ones(value_dimension * total_values * attention_span , embedding_size))
-    w_values_bias = nn.Parameter(torch.zeros(value_dimension * total_values * attention_span ))
+    w_keys = nn.Parameter(torch.ones(query_dimension * total_values * attention_span, embedding_size))
+    w_values = nn.Parameter(torch.ones(value_dimension * total_values * attention_span, embedding_size))
+    w_values_bias = nn.Parameter(torch.zeros(value_dimension * total_values * attention_span))
 
     w_values.learn = adaptation
     w_values_bias.learn = adaptation
