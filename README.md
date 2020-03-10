@@ -3,7 +3,7 @@ This is an older implementation of OML that was used during the review period. T
 
 I will hopefully update the code someday; other things are keeping me busy currently. 
 
-# mrcl (NeurIPS19)
+# OML (Previously MRCL) (NeurIPS19)
 
 Paper : https://arxiv.org/abs/1905.12588
 
