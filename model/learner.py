@@ -92,12 +92,10 @@ class Learner(nn.Module):
     def add_neuromodulation(self, context_dimension):
         self.neuromodulation_status = True
         self.neuromodulation_parameters = nn.ParameterList()
-        for info_dict in self.config:
-            if info_dict["name"] == "linear" or info_dict["name"] == "linear-sparse":
-                size = info_dict["config"]["out"]
-                w, b = oml.nn.linear(size, context_dimension, adaptation=False, meta=True)
-                self.neuromodulation_parameters.append(w)
-                self.neuromodulation_parameters.append(b)
+        for weight in self.vars:
+            w, b = oml.nn.linear(np.prod(weight.shape), context_dimension, adaptation=False, meta=True)
+            self.neuromodulation_parameters.append(w)
+            self.neuromodulation_parameters.append(b)
 
     def add_context_plasticity(self, context_dimension):
         self.context_plasticity_status = True
@@ -166,11 +164,6 @@ class Learner(nn.Module):
             new_fast_weights = []
             for counter in range(len(vars)):
                 temp = vars[counter] * self.meta_strength[counter].view(vars[counter].shape)
-                # print(temp)
-                # print(self.meta_strength[counter].view(vars[counter].shape))
-                # print(temp.shape)
-
-                # temp = vars[counter] * (torch.sigmoid(self.meta_strength[counter].view(vars[counter].shape)) * 2)
                 new_fast_weights.append(temp)
 
             vars = new_fast_weights
@@ -206,17 +199,32 @@ class Learner(nn.Module):
 
             elif name == 'linear':
                 w, b = vars[idx], vars[idx + 1]
-                x = F.linear(x, w, b)
-                idx += 2
-                if neuromodulate:
-                    w, b = self.neuromodulation_parameters[neuro_idx], self.neuromodulation_parameters[neuro_idx + 1]
 
-                    x_gate = torch.sigmoid(F.linear(x_embedding, w, b)).unsqueeze(1)
-                    assert (len(x_gate.shape) == 3)
-                    # x_gate = F.avg_pool1d(x_gate, kernel_size=3, stride=1, padding=1, count_include_pad=False)
-                    x_gate = x_gate.view(x.shape)
-                    x = x * x_gate
-                    neuro_idx += 2
+                if neuromodulate:
+                    w = w
+                    w_weight, b_weight = self.neuromodulation_parameters[neuro_idx], self.neuromodulation_parameters[
+                        neuro_idx + 1]
+                    w_bias, b_bias = self.neuromodulation_parameters[neuro_idx + 2], self.neuromodulation_parameters[
+                        neuro_idx + 3]
+                    # print(x_embedding.shape, w_weight.shape, b_bias.shape)
+                    #
+                    weight_mask = torch.sigmoid(
+                        F.linear(x_embedding, w_weight, b_weight).view(-1, w.shape[0], w.shape[1]))
+                    bias_mask = torch.sigmoid(F.linear(x_embedding, w_bias, b_bias).view(-1, b.shape[0]))
+                    w, b = w.unsqueeze(0), b.unsqueeze(0)
+                    w = w * weight_mask
+                    b = b * bias_mask
+                    x = x.unsqueeze(2)
+                    x = torch.bmm(w, x).squeeze(2) + b
+                    # x_gate = torch.sigmoid(F.linear(x_embedding, w, b)).unsqueeze(1)
+                    # assert (len(x_gate.shape) == 3)
+                    # # x_gate = F.avg_pool1d(x_gate, kernel_size=3, stride=1, padding=1, count_include_pad=False)
+                    # x_gate = x_gate.view(x.shape)
+                    # x = x * x_gate
+                    neuro_idx += 4
+                else:
+                    x = F.linear(x, w, b)
+                idx += 2
 
 
             elif name == 'flatten':

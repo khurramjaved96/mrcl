@@ -162,7 +162,7 @@ class MetaLearnerRegression(nn.Module):
             fast_weights = self.inner_update(self.net, fast_weights, grad, self.update_lr, list_of_context)
 
         prediction_qry_set = self.net(x_rand[0], fast_weights)
-
+        # print(prediction_qry_set)
         final_meta_loss = F.mse_loss(prediction_qry_set, y_rand[0, :, 0].unsqueeze(1))
 
         self.optimizer_zero_grad()

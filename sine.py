@@ -115,7 +115,8 @@ def main():
                 if metalearner.context_plasticity:
                     list_of_context = metalearner.net.forward_plasticity(x_traj[k])
 
-                updated_weights = metalearner.inner_update(net, net.vars, grad, adaptation_lr, list_of_context, log=bool(not (step + meta_counter)))
+                updated_weights = metalearner.inner_update(net, net.vars, grad, adaptation_lr, list_of_context,
+                                                           log=bool(not (step + meta_counter)))
                 metalearner.net.update_weights(updated_weights)
 
             if not args["no_meta"]:
