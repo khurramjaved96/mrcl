@@ -276,7 +276,7 @@ class SampleOmni:
         dataset = self.get_task_trainset(tasks, True)
         # dataset = self.get_task_testset(tasks)
         train_iterator = torch.utils.data.DataLoader(dataset,
-                                                     batch_size=10,
+                                                     batch_size=15,
                                                      shuffle=True, num_workers=1)
         self.complete_iterator = train_iterator
         logger.info("Len of complete iterator = %d", len(self.complete_iterator) * 256)

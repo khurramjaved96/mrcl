@@ -46,7 +46,7 @@ def log_accuracy(maml, my_experiment, iterator_test, device, writer, step):
         with torch.no_grad():
             img = img.to(device)
             target = target.to(device)
-            logits_q = maml.net(img, vars=None, bn_training=False, feature=False)
+            logits_q = maml.net(img, vars=None)
             pred_q = F.softmax(logits_q, dim=1).argmax(dim=1)
             correct += torch.eq(pred_q, target).sum().item() / len(img)
     writer.add_scalar('/metatrain/test/classifier/accuracy', correct / len(iterator_test), step)
@@ -280,3 +280,77 @@ def resize_image(img, factor):
         for b in range(0, img.shape[1]):
             img2[a * factor:(a + 1) * factor, b * factor:(b + 1) * factor] = img[a, b]
     return img2
+
+
+
+def get_run(arg_dict, rank=0):
+    # print(arg_dict)
+    combinations =[]
+
+    if isinstance(arg_dict["seed"], list):
+        combinations.append(len(arg_dict["seed"]))
+
+
+    for key in arg_dict.keys():
+        if isinstance(arg_dict[key], list) and not key=="seed":
+            combinations.append(len(arg_dict[key]))
+
+    total_combinations = np.prod(combinations)
+    selected_combinations = []
+    for base in combinations:
+        selected_combinations.append(rank%base)
+        rank = int(rank/base)
+
+    counter=0
+    result_dict = {}
+
+    result_dict["seed"] = arg_dict["seed"]
+    if isinstance(arg_dict["seed"], list):
+        result_dict["seed"] = arg_dict["seed"][selected_combinations[0]]
+        counter += 1
+    #
+
+    for key in arg_dict.keys():
+        if key !="seed":
+            result_dict[key] = arg_dict[key]
+            if isinstance(arg_dict[key], list):
+                result_dict[key] = arg_dict[key][selected_combinations[counter]]
+                counter+=1
+
+    logger.info("Parameters %s", str(result_dict))
+    # 0/0
+    return result_dict
+
+import torch
+#
+def construct_set(iterators, sampler, steps, shuffle=True):
+    x_traj = []
+    y_traj = []
+
+    x_rand = []
+    y_rand = []
+
+
+    id_map = list(range(sampler.capacity - 1))
+    if shuffle:
+        random.shuffle(id_map)
+
+    for id, it1 in enumerate(iterators):
+        id_mapped = id_map[id]
+        for inner in range(steps):
+            x, y = sampler.sample_batch(it1, id_mapped, 10)
+            x_traj.append(x)
+            y_traj.append(y)
+        #
+        x, y = sampler.sample_batch(it1, id_mapped, 10)
+        x_rand.append(x)
+        y_rand.append(y)
+
+    x_rand = torch.stack([torch.cat(x_rand)])
+    y_rand = torch.stack([torch.cat(y_rand)])
+
+    x_traj = torch.stack(x_traj)
+    y_traj = torch.stack(y_traj)
+
+
+    return x_traj, y_traj, x_rand, y_rand

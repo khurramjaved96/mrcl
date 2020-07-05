@@ -9,14 +9,24 @@ from logging import handlers
 logger = logging.getLogger('experiment')
 
 
-#
+# How to use this class (See the main function at the end of this file for an actual example)
+
+## 1. Create an experiment object in the main file (the one used to run the experiment)
+## 2. Pass a name and args_parse objecte. Output_dir corresponds to directly where all the results will be stored
+## 3. Use experiment.path to get path to the output_dir to store any other results (such as saving the model)
+## 4. You can also store results in experiment.result dictionary (Only add objects which are json serializable)
+## 5. Call experiment.store_json() to store/update the json file (I just call it periodically in the training loop)
 
 class experiment:
     '''
     Class to create directory and other meta information to store experiment results.
+    A directory is created in output_dir/DDMMYYYY/name_0
+    In-case there already exists a folder called name, name_1 would be created.
+
+    Race condition:
     '''
 
-    def __init__(self, name, args, output_dir="../", commit_changes=False):
+    def __init__(self, name, args, output_dir="../", commit_changes=False, rank=None, seed=None):
         import sys
         self.command_args = "python " + " ".join(sys.argv)
         if commit_changes:
@@ -34,8 +44,11 @@ class experiment:
                 # self.git_hash = "Not a Git Repo"
             # logger.info("Git hash for current experiment : %s", self.git_hash)
         if not args is None:
-            self.name = name
-            self.params = vars(args)
+            if rank is not None:
+                self.name = name + str(rank) + "/" + str(seed)
+            else:
+                self.name = name
+            self.params = args
             print(self.params)
             self.results = {}
             self.dir = output_dir
@@ -49,30 +62,33 @@ class experiment:
                     assert (os.path.exists(output_dir + root_folder))
 
             self.root_folder = output_dir + root_folder
-            self.full_path = self.root_folder + "/" + self.name
+            full_path = self.root_folder + "/" + self.name
 
             ver = 0
 
-            while os.path.exists(self.full_path + "_" + str(ver)):
+            while True:
                 ver += 1
-            try:
-                os.makedirs(self.full_path + "_" + str(ver))
-            except:
-                os.makedirs(self.full_path + "_" + str(ver) + "_race_condition")
-            self.path = self.full_path + "_" + str(ver) + "/"
-            # logger.info("Experiment result directory", self.path)
-            self.results["Temp Results"] = [[1, 2, 3, 4], [5, 6, 2, 6]]
-            fh = logging.FileHandler(self.path + "log.txt")
+                if not os.path.exists(full_path + "_" + str(ver)):
+                    try:
+                        os.makedirs(full_path + "_" + str(ver))
+                        break
+                    except:
+                        pass
+            self.path = full_path + "_" + str(ver) + "/"
 
+            fh = logging.FileHandler(self.path + "log.txt")
             fh.setLevel(logging.DEBUG)
-            fh.setFormatter(logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s'))
+            fh.setFormatter(
+                logging.Formatter('rank:' + str(args['rank']) + ' ' + name + ' %(levelname)-8s %(message)s'))
             logger.addHandler(fh)
 
             ch = logging.handlers.logging.StreamHandler()
             ch.setLevel(logging.DEBUG)
-            ch.setFormatter(logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s'))
+            ch.setFormatter(
+                logging.Formatter('rank:' + str(args['rank']) + ' ' + name + ' %(levelname)-8s %(message)s'))
             logger.addHandler(ch)
             logger.setLevel(logging.DEBUG)
+            logger.propagate = False
 
             self.store_json()
 

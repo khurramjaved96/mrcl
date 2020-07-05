@@ -18,7 +18,8 @@ class DatasetFactory:
                 return om.Omniglot("../data/omni", background=background, download=True, train=train,
                                    transform=train_transform, all=all)
             else:
-                return om.Omniglot(path, download=True, background=train, transform=train_transform)
+                return om.Omniglot(path, background=background, download=True, train=train,
+                                   transform=train_transform, all=all)
 
 
         else:
