@@ -47,7 +47,7 @@ Results will be stored in a json file in "../results/DDMonthYYYY/Omniglot/eval/O
 Finally, to evaluate performance on the Incremental Sin task, run the following:
 
 ``` bash
-python evaluate_regression.py --model ./trained_models/incremental_sine_oml.model --name sine_test_set --rln 6 --tasks 10 --capacity 10 --runs 50
+python evaluate_omniglot.py --model-path path_to_model/learner.model --name Omniglot_evaluation/  --schedule 10:50:100:200:600
 ```
 
 results will be stored in a json file in ""../results/DDMonthYYYY/Sin/eval/Sine_traj_0"
