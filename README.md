@@ -1,10 +1,13 @@
 # Major bug fix and refactoring: Dated: 05 July, 2020
 
-1.  Fixed a bug that affected gradient computation
-2. New more flexible syntax for defining PLN and RLN networks and running experiments. It is now possible to add attention layers, and learning rates as meta-parameters
-3. Significantly improved results on both omniglot and sine benchmark
-4. The bug fix also makes the optimization more robust to hyper-parameters.
-5. The representation learning alone achieves results similar to those achieved by ANML now. 
+1. Fixed a bug that affected gradient computation
+2. New more flexible syntax for defining PLN and RLN networks for running experiments. It is now possible to add attention layers, and learning rates as meta-parameters.
+3. Significantly improved results on both omniglot and sine benchmark by fixing the bug. By using a linear PLN layer -- as suggested by S. Beaulieu et.al (2020) -- it is possible to get the same results as ANML without using any neuromodulation layers (S. Beaulieu 2020). 
+4. The bug fix also makes the optimization more robust to hyper-parameters. The same results hold for a wide number of meta-learning and inner learning rates. 
+
+# Upcoming updates 
+
+1. Adding comparisons to attention layer/neuromodulation layer. 
 
 # OML (Previously MRCL) (NeurIPS19)
 
