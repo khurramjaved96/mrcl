@@ -18,7 +18,7 @@ Paper : https://arxiv.org/abs/1905.12588
 ### Learning OML Representations
 To learn representations for omnigtot run the following command:
 ``` bash
-python oml_omniglot.py --rln 6 --update_lr 0.03 --name oml_omniglot --update_step 10 --steps 15000
+python oml_omniglot.py --update_lr 0.03 --meta_lr 1e-4 --name OML_Omniglot/ --tasks 3 --update_step 5 --steps 700000 --rank 0
 ```
 
 This will store the learned model at ../results/DDMonthYYYY/Omniglot/0.0001/oml_omniglot)
