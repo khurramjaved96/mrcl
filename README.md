@@ -3,7 +3,8 @@
 1. Fixed a bug that affected gradient computation
 2. New more flexible syntax for defining PLN and RLN networks for running experiments. It is now possible to add attention layers, and learning rates as meta-parameters.
 3. Significantly improved results on both omniglot and sine benchmark by fixing the bug. By using a linear PLN layer -- as suggested by S. Beaulieu et.al (2020) -- it is possible to get the same results as ANML without using any neuromodulation layers (S. Beaulieu 2020). 
-4. The bug fix also makes the optimization more robust to hyper-parameters. The same results hold for a wide number of meta-learning and inner learning rates. 
+4. The bug fix also makes the optimization more robust to hyper-parameters. The same results hold for a wide number of meta-learning and inner learning rates.
+5. New updated pretrained models in the google drive. Check mrcl_trained_models/Omniglot_updated. There are eight pre-trained models, with different hyper-parameters. You can look at hyper-parameters in the metadata.json file. 
 
 # Upcoming updates 
 
