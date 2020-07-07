@@ -6,7 +6,7 @@
 4. The bug fix also makes the optimization more robust to hyper-parameter changes. The omniglot results hold for a wide range of meta-learning and inner learning rates.
 5. Added new pretrained models in the google drive. Check mrcl_trained_models/Omniglot_updated. There are eight pre-trained models, with different hyper-parameters. You can look at hyper-parameters in the metadata.json file. The old model will no longer work withe new code. If you want to use the old models, checkout an older commit of the repo. 
 
-# OML (Online-aware Meta-learning) (NeurIPS19)
+# OML (Online-aware Meta-learning) ~ NeurIPS19
 
 Paper : https://arxiv.org/abs/1905.12588
 
