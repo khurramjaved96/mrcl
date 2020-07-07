@@ -1,4 +1,4 @@
-# Major bug fix and refactoring: Dated: 05 July, 2020
+# (05 July, 2020) Major bug fix and refactoring log:
 
 1. Fixed a bug that resulted in incorrect meta-gradients.
 2. Refactored the code. It should be easier to understand and modify now. 
