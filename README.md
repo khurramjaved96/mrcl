@@ -23,31 +23,18 @@ python oml_omniglot.py --update_lr 0.03 --meta_lr 1e-4 --name OML_Omniglot/ --ta
 
 This will store the learned model at ../results/DDMonthYYYY/Omniglot/0.0001/oml_omniglot)
 
-For learning represenations for Incremental Sine Waves, run:
-``` bash
-python oml_regression.py --update_step 40 --meta_lr 0.0001 --update_lr 0.003 --tasks 10 --capacity 10 --width 400 --rln 6
-```
-This will store the learned model at ../results/DDMonthYYYY/Sin/0.0001/oml_regression)
 
 ### Evaluating Representations learned by OML
 We provide trained models at https://drive.google.com/drive/folders/1vHHT5kxtgx8D4JHYg25iA-C31O5OjAQz?usp=sharing which can be used to evaluate performance on the continual learning benchmarks. 
 
 To evaluate performance on test trajectories of omniglot run: 
 ``` bash
-python evaluate_omniglot.py --rln 6 --model ./trained_models/split_omniglot_oml.model --name Omni_test_traj --test --runs 50
+python evaluate_omniglot.py --model-path path_to_model/learner.model --name Omniglot_evaluation/  --schedule 10:50:100:200:600
 ```
 
 Exclude the --test argument to get result on training trajectories (Used to measure forgetting). 
 
 Results will be stored in a json file in "../results/DDMonthYYYY/Omniglot/eval/Omni_test_traj_0"
-
-Finally, to evaluate performance on the Incremental Sin task, run the following:
-
-``` bash
-python evaluate_omniglot.py --model-path path_to_model/learner.model --name Omniglot_evaluation/  --schedule 10:50:100:200:600
-```
-
-results will be stored in a json file in ""../results/DDMonthYYYY/Sin/eval/Sine_traj_0"
 
 ### Visualizing Representations
 
