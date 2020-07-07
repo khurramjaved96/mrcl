@@ -1,16 +1,12 @@
 # Major bug fix and refactoring: Dated: 05 July, 2020
 
-1. Fixed a bug that affected gradient computation
-2. New more flexible syntax for defining PLN and RLN networks for running experiments. It is now possible to add attention layers, and learning rates as meta-parameters.
-3. Significantly improved results on both omniglot and sine benchmark by fixing the bug. By using a linear PLN layer -- as suggested by S. Beaulieu et.al (2020) -- it is possible to get the same results as ANML without using any neuromodulation layers (S. Beaulieu 2020). 
-4. The bug fix also makes the optimization more robust to hyper-parameters. The same results hold for a wide number of meta-learning and inner learning rates.
-5. New updated pretrained models in the google drive. Check mrcl_trained_models/Omniglot_updated. There are eight pre-trained models, with different hyper-parameters. You can look at hyper-parameters in the metadata.json file. 
+1. Fixed a bug that resulted in incorrect meta-gradients.
+2. Refactored the code. It should be easier to understand and modify now. 
+3. Significantly improved results on both omniglot and sine benchmark by fixing the bug. By using a linear PLN layer -- as suggested by S. Beaulieu et.al (2020) -- it is possible to get the same results as ANML (S. Beaulieu 2020) without using any neuromodulation layers. 
+4. The bug fix also makes the optimization more robust to hyper-parameter changes. The omniglot results hold for a wide range of meta-learning and inner learning rates.
+5. Added new pretrained models in the google drive. Check mrcl_trained_models/Omniglot_updated. There are eight pre-trained models, with different hyper-parameters. You can look at hyper-parameters in the metadata.json file. The old model will no longer work withe new code. If you want to use the old models, checkout an older commit of the repo. 
 
-# Upcoming updates 
-
-1. Adding comparisons to attention layer/neuromodulation layer. 
-
-# OML (Previously MRCL) (NeurIPS19)
+# OML (Online-aware Meta-learning) (NeurIPS19)
 
 Paper : https://arxiv.org/abs/1905.12588
 
