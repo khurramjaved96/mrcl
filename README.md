@@ -8,7 +8,7 @@
 
 A discussion on the changes: https://github.com/khurramjaved96/mrcl/issues/15
 
-Reference: Beaulieu, Shawn, et al. "Learning to continually learn." arXiv preprint arXiv:2002.09571 (2020).
+Reference: Beaulieu, Shawn, et al. "Learning to continually learn." ECAI (2020).
 # OML (Online-aware Meta-learning) ~ NeurIPS19
 
 Paper : https://arxiv.org/abs/1905.12588
