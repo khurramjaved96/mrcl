@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger('experiment')
 from torch.nn import functional as F
 import numpy as np
+import copy
 
 transition = namedtuple('transition', 'state, next_state, action, reward, is_terminal')
 import torch
@@ -164,6 +165,8 @@ def remove_classes(trainset, to_keep):
 
 
 def remove_classes_omni(trainset, to_keep):
+
+    trainset = copy.deepcopy(trainset)
     # trainset.data = trainset.data[order]
     trainset.targets = np.array(trainset.targets)
     # trainset.targets = trainset.targets[order]
