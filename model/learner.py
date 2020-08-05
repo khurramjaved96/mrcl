@@ -50,14 +50,23 @@ class Learner(nn.Module):
                 vars_list.append(w)
                 vars_list.append(b)
 
-
             elif info_dict["name"] in ['tanh', 'relu', 'upsample', 'avg_pool2d', 'max_pool2d',
-                                       'flatten', 'reshape', 'leakyrelu', 'sigmoid']:
+                                       'flatten', 'reshape', 'leakyrelu', 'sigmoid', 'rotate']:
                 continue
             else:
                 print(info_dict["name"])
                 raise NotImplementedError
         return vars_list
+
+    def add_rotation(self):
+        self.rotate = nn.Parameter(torch.ones(2304,2304))
+        torch.nn.init.uniform_(self.rotate)
+        self.rotate_inverse = nn.Parameter(torch.inverse(self.rotate))
+        # print(self.rotate.shape)
+        # print(self.rotate_inverse.shape)
+        # quit()
+        logger.info("Inverse computed")
+
 
     def reset_vars(self):
         """
@@ -67,7 +76,6 @@ class Learner(nn.Module):
         for var in self.vars:
             if var.adaptation is True:
                 if len(var.shape) > 1:
-                    logger.info("Resetting weight")
                     torch.nn.init.kaiming_normal_(var)
                 else:
                     torch.nn.init.zeros_(var)
@@ -87,7 +95,6 @@ class Learner(nn.Module):
 
         for layer_counter, info_dict in enumerate(config):
             name = info_dict["name"]
-
             if name == 'conv2d':
                 w, b = vars[idx], vars[idx + 1]
                 x = F.conv2d(x, w, b, stride=info_dict['config']['stride'], padding=info_dict['config']['padding'])
@@ -100,6 +107,11 @@ class Learner(nn.Module):
 
             elif name == 'flatten':
                 x = x.view(x.size(0), -1)
+
+            elif name == 'rotate':
+                # pass
+                x = F.linear(x, self.rotate)
+                x = F.linear(x, self.rotate_inverse)
 
             elif name == 'reshape':
                 continue
@@ -128,7 +140,7 @@ class Learner(nn.Module):
         if vars is None:
             vars = self.vars
         return list(filter(lambda x: x.adaptation, list(vars)))
-
+    
     def get_forward_meta_parameters(self):
         """
         :return: adaptation parameters i.e. parameters changed in the inner loop

@@ -20,5 +20,4 @@ class Parser(configargparse.ArgParser):
         self.add('--name', help='Name of experiment', default="oml_regression")
         self.add('--path', help='Path of the dataset', default="../")
 
-#
 
