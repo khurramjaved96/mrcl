@@ -21,7 +21,7 @@ def main(args):
     np.random.seed(args.seed)
     random.seed(args.seed)
 
-    my_experiment = experiment(args.name, args, "../results/", args.commit)
+    # my_experiment = experiment(args.name, args, "../results/", args.commit)
 
     logger = logging.getLogger('experiment')
     logger.setLevel(logging.INFO)
@@ -48,12 +48,15 @@ def main(args):
 
     maml = torch.load(args.model, map_location='cpu')
 
+    config = mf.ModelFactory.get_model("na", "omniglot", output_dimension=1000)
+
     maml = maml.to(device)
+    maml.config = config
 
     reps = []
     counter = 0
 
-    fig, axes = plt.subplots(9, 4)
+    # fig, axes = plt.subplots(9, 4)
     with torch.no_grad():
         for img, target in iterator:
             print(counter)
@@ -61,8 +64,9 @@ def main(args):
             img = img.to(device)
             target = target.to(device)
             # print(target)
-            rep = maml(img, vars=None, bn_training=False, feature=True)
+            rep = maml(img, vars=None, rep=True)
             rep = rep.view((-1, 32, 72)).detach().cpu().numpy()
+
             rep_instance = rep[0]
             if args.binary:
                 rep_instance = (rep_instance > 0).astype(int)
@@ -125,12 +129,12 @@ if __name__ == '__main__':
     argparser.add_argument("--iid", action="store_true")
     argparser.add_argument("--binary", action="store_true")
     argparser.add_argument("--max", action="store_true")
+    argparser.add_argument("--data-path", type=str, default="../data/")
     argparser.add_argument('--color', help='Name of experiment', default="YlGn")
     args = argparser.parse_args()
-
+    #
     import os
 
-    args.data_path = "../data/omni"
 
     args.name = "/".join([args.dataset, "representation", str(args.epoch).replace(".", "_"), args.name + args.color])
 
