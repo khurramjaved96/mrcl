@@ -68,7 +68,7 @@ class ModelFactory():
 
                 {"name": 'flatten'},
                 # {"name": 'rotate'},
-                # {"name": 'rep'},
+                {"name": 'rep'},
 
                 {"name": 'linear', "adaptation": True, "meta": True,
                  "config": {"out": 1000, "in": 9 * channels}}

@@ -72,40 +72,44 @@ def main(args):
                 rep = (rep > 0).astype(int)
             if counter < 36:
                 print("Adding plot")
-                axes[int(counter / 4), counter % 4].imshow(rep_instance, cmap=args.color)
-                axes[int(counter / 4), counter % 4].set_yticklabels([])
-                axes[int(counter / 4), counter % 4].set_xticklabels([])
-                axes[int(counter / 4), counter % 4].set_aspect('equal')
+                # axes[int(counter / 4), counter % 4].imshow(rep_instance, cmap=args.color)
+                # axes[int(counter / 4), counter % 4].set_yticklabels([])
+                # axes[int(counter / 4), counter % 4].set_xticklabels([])
+                # axes[int(counter / 4), counter % 4].set_aspect('equal')
 
+            # print(rep)
+            # quit()
             counter += 1
             reps.append(rep)
 
-    plt.subplots_adjust(wspace=0.0, hspace=0.0)
-
-    plt.savefig(my_experiment.path + "instance_" + str(counter) + ".pdf", format="pdf")
-    plt.clf()
+    # plt.subplots_adjust(wspace=0.0, hspace=0.0)
+    #
+    # plt.savefig(my_experiment.path + "instance_" + str(counter) + ".pdf", format="pdf")
+    # plt.clf()
 
     rep = np.concatenate(reps)
+    # print("Rep shape", rep.shape)
+    # quit()
     averge_activation = np.mean(rep, 0)
-    plt.imshow(averge_activation, cmap=args.color)
-    plt.colorbar()
-    plt.clim(0, np.max(averge_activation))
-    plt.savefig(my_experiment.path + "average_activation.pdf", format="pdf")
-    plt.clf()
+    # plt.imshow(averge_activation, cmap=args.color)
+    # plt.colorbar()
+    # plt.clim(0, np.max(averge_activation))
+    # plt.savefig(my_experiment.path + "average_activation.pdf", format="pdf")
+    # plt.clf()
     instance_sparsity = np.mean((np.sum(np.sum(rep, 1), 1)) / (64 * 36))
     print("Instance sparisty = ", instance_sparsity)
-    my_experiment.results["instance_sparisty"] = str(instance_sparsity)
+    # my_experiment.results["instance_sparisty"] = str(instance_sparsity)
     lifetime_sparsity = (np.sum(rep, 0) / len(rep)).flatten()
     mean_lifetime = np.mean(lifetime_sparsity)
     print("Lifetime sparsity = ", mean_lifetime)
-    my_experiment.results["lifetime_sparisty"] = str(mean_lifetime)
+    # my_experiment.results["lifetime_sparisty"] = str(mean_lifetime)
     dead_neuros = float(np.sum((lifetime_sparsity == 0).astype(int))) / len(lifetime_sparsity)
     print("Dead neurons percentange = ", dead_neuros)
-    my_experiment.results["dead_neuros"] = str(dead_neuros)
-    plt.hist(lifetime_sparsity)
+    # my_experiment.results["dead_neuros"] = str(dead_neuros)
+    # plt.hist(lifetime_sparsity)
 
-    plt.savefig(my_experiment.path + "histogram.pdf", format="pdf")
-    my_experiment.store_json()
+    # plt.savefig(my_experiment.path + "histogram.pdf", format="pdf")
+    # my_experiment.store_json()
 
 
 if __name__ == '__main__':

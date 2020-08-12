@@ -50,7 +50,7 @@ class Learner(nn.Module):
                 vars_list.append(w)
                 vars_list.append(b)
 
-            elif info_dict["name"] in ['tanh', 'relu', 'upsample', 'avg_pool2d', 'max_pool2d',
+            elif info_dict["name"] in ['tanh', 'rep', 'relu', 'upsample', 'avg_pool2d', 'max_pool2d',
                                        'flatten', 'reshape', 'leakyrelu', 'sigmoid', 'rotate']:
                 continue
             else:
